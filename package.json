@@ -1,0 +1,58 @@
+{
+  "name": "nokta-pos",
+  "version": "1.0.0",
+  "description": "Flexible Point of Sale platform for Android tablets and desktop",
+  "author": "NOKTA POS",
+  "main": "electron.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "desktop": "electron .",
+    "desktop:build": "electron-builder --win nsis",
+    "test": "node tests/run.cjs",
+    "check": "node scripts/check-project.cjs",
+    "android:sync": "node scripts/capacitor-env.js ./node_modules/@capacitor/cli/bin/capacitor sync android"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.5.1",
+    "@capacitor/core": "^8.5.1",
+    "chart.js": "^4.5.1",
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "socket.io": "^4.7.4"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.5.1",
+    "electron": "^44.2.0",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "com.nokta.pos.desktop",
+    "productName": "NOKTA POS",
+    "asar": true,
+    "directories": {
+      "output": "release/windows"
+    },
+    "files": [
+      "electron.js",
+      "preload.js",
+      "server.js",
+      "src/**/*",
+      "public/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "public/nokta-pos-icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
+  },
+  "engines": {
+    "node": ">=22.5.0"
+  }
+}

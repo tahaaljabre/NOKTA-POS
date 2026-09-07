@@ -1,0 +1,9 @@
+{
+  "appId": "com.nokta.pos",
+  "appName": "NOKTA POS",
+  "webDir": "mobile-shell",
+  "server": {
+    "androidScheme": "https",
+    "cleartext": true
+  }
+}

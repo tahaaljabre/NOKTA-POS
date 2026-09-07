@@ -1,0 +1,11 @@
+node_modules/
+data/
+release/
+.gradle/
+android-sdk/
+android/.gradle/
+android/keystore.properties
+*.jks
+*.keystore
+*.log
+android-commandline-tools.zip

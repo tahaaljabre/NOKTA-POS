@@ -1,0 +1,1017 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#6b1124">
+  <meta name="description" content="NOKTA POS - Flexible Point of Sale platform">
+  <script>
+    // This POS needs its local server to use the shared database and logins.
+    // Opening index.html directly bypasses that server, so send it to the app.
+    if (window.location.protocol === 'file:') {
+      window.location.replace('http://localhost:3000/');
+    }
+  </script>
+  <title>NOKTA POS</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="nokta-pos-icon.png" type="image/png">
+  <link rel="apple-touch-icon" href="nokta-pos-icon.png">
+  <link rel="stylesheet" href="style.css?v=22">
+</head>
+
+<body>
+
+  <!-- Offline indicator -->
+  <div id="offline-bar" class="offline-bar hidden">⚡ وضع عدم الاتصال - سيتم المزامنة عند عودة الشبكة</div>
+
+  <!-- ===== LOGIN SCREEN ===== -->
+  <div id="login-screen" class="login-screen">
+    <div class="login-box">
+      <h1 id="login-title">اسم المنشأة</h1>
+      <p id="login-subtitle" data-i18n="login_subtitle">أدخل رقمك السري للدخول</p>
+      <div class="pin-display" id="pin-display">_ _ _ _</div>
+       <div class="pin-pad">
+        <button class="pin-btn" data-num="1">1</button>
+        <button class="pin-btn" data-num="2">2</button>
+        <button class="pin-btn" data-num="3">3</button>
+        <button class="pin-btn" data-num="4">4</button>
+        <button class="pin-btn" data-num="5">5</button>
+        <button class="pin-btn" data-num="6">6</button>
+        <button class="pin-btn" data-num="7">7</button>
+        <button class="pin-btn" data-num="8">8</button>
+        <button class="pin-btn" data-num="9">9</button>
+        <button class="pin-btn pin-clear" data-num="clear">C</button>
+        <button class="pin-btn" data-num="0">0</button>
+        <button class="pin-btn pin-ok" data-num="ok">✓</button>
+       </div>
+       <button type="button" id="show-admin-login" class="lang-toggle-login" data-i18n="admin_login_toggle">دخول المدير باسم المستخدم</button>
+       <form id="admin-login-form" style="display:none; margin-top:14px; text-align:right;">
+         <input id="admin-username" class="form-control" autocomplete="username" data-i18n-placeholder="username_ph" placeholder="اسم المستخدم" style="margin-bottom:8px;">
+         <div class="password-input-wrap">
+           <input id="admin-password" type="password" class="form-control" autocomplete="current-password" data-i18n-placeholder="password_ph" placeholder="كلمة المرور">
+           <button type="button" class="password-visibility-btn" id="toggle-admin-password" data-i18n-title="show_password" title="إظهار كلمة المرور" aria-label="إظهار كلمة المرور">👁</button>
+         </div>
+         <button class="btn btn-primary" type="submit" style="width:100%;" data-i18n="admin_login_submit">دخول المدير</button>
+       </form>
+       <form id="initial-admin-form" style="display:none; margin-top:14px; text-align:right;">
+         <h3 data-i18n="admin_setup_title">إعداد حساب المدير</h3>
+         <p style="font-size:13px;" data-i18n="admin_setup_desc">أنشئ الحساب الإداري الأول. كلمة المرور يجب أن تكون 6 أحرف على الأقل وتشمل حرفاً ورقماً ورمزاً.</p>
+         <input id="setup-name" class="form-control" autocomplete="name" data-i18n-placeholder="admin_name_ph" placeholder="اسم المدير" style="margin-bottom:8px;">
+         <input id="setup-username" class="form-control" autocomplete="username" data-i18n-placeholder="username_ph" placeholder="اسم المستخدم" style="margin-bottom:8px;">
+         <input id="setup-current-pin" type="password" inputmode="numeric" autocomplete="off" class="form-control" data-i18n-placeholder="current_admin_pin_ph" placeholder="PIN المدير الحالي (للنظام الموجود فقط)" style="display:none; margin-bottom:8px;">
+         <input id="setup-password" type="password" class="form-control" autocomplete="new-password" data-i18n-placeholder="strong_password_ph" placeholder="كلمة المرور القوية" style="margin-bottom:8px;">
+         <input id="setup-password-confirm" type="password" class="form-control" autocomplete="new-password" data-i18n-placeholder="confirm_password_ph" placeholder="تأكيد كلمة المرور" style="margin-bottom:8px;">
+         <button class="btn btn-primary" type="submit" style="width:100%;" data-i18n="create_admin">إنشاء حساب المدير</button>
+       </form>
+      <div class="login-error" id="login-error"></div>
+      <button class="lang-toggle-login" id="lang-toggle-login">EN / عربي</button>
+    </div>
+  </div>
+
+  <!-- ===== MAIN APP ===== -->
+  <div id="app" class="app hidden">
+    <header class="top-bar">
+      <div class="top-bar-right">
+        <h1 id="restaurant-name">🍽️ اسم المنشأة</h1>
+        <span class="current-user" id="current-user"></span>
+      </div>
+      <nav class="top-bar-center">
+        <button class="nav-btn active" data-view="pos" data-i18n="nav_pos">الطلبات</button>
+        <button class="nav-btn" data-view="tables" data-i18n="nav_tables">الطاولات</button>
+        <button class="nav-btn" data-view="active-orders" data-i18n="nav_active">الطلبات النشطة</button>
+        <a href="kds.html" id="nav-kds" target="_blank" rel="noopener" class="nav-btn" data-i18n="nav_kds">🧑‍🍳 شاشة المطبخ</a>
+        <button class="nav-btn" data-view="invoices" data-i18n="nav_invoices">الفواتير</button>
+        <button class="nav-btn" data-view="dashboard" data-i18n="nav_dashboard">اللوحة</button>
+        <button class="nav-btn" data-view="admin" data-i18n="nav_admin">الإدارة</button>
+      </nav>
+      <div class="top-bar-left">
+        <button class="header-tools-toggle" id="header-tools-toggle" type="button" aria-expanded="false" aria-controls="header-tools" title="خيارات الموظف">☰</button>
+        <div class="header-tools" id="header-tools">
+          <div class="header-tools-user" id="header-tools-user"></div>
+          <button class="btn-shift-close" id="btn-shift-close" type="button" title="إغلاق وردية / مبيعات الموظف اليومية">
+            <span>🔒</span> <span data-i18n="employee_closing">إغلاق ورديتي</span>
+          </button>
+          <button class="lang-toggle-btn" id="lang-toggle-top" title="تغيير اللغة / Change Language">🌐 EN/عربي</button>
+          <span id="sync-status" class="sync-status" title="حالة المزامنة">✓</span>
+          <span id="current-time"></span>
+          <button class="btn-logout" id="btn-logout" data-i18n="logout">خروج</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- POS View -->
+    <div id="view-pos" class="view active">
+      <!-- Mobile POS Sub-Tabs (Menu / Current Bill) -->
+      <div class="pos-mobile-nav" id="pos-mobile-nav">
+        <button class="pos-mobile-tab active" id="tab-btn-menu" onclick="switchMobilePosTab('menu')">
+          <span>📋</span> <span data-i18n="menu_tab">قائمة المنيو</span>
+        </button>
+        <button class="pos-mobile-tab" id="tab-btn-bill" onclick="switchMobilePosTab('bill')">
+          <span>🛒</span> <span data-i18n="order_tab">الفاتورة والطلب</span>
+          <span class="mobile-cart-badge" id="mobile-cart-badge">0</span>
+        </button>
+      </div>
+
+      <div class="pos-layout">
+        <div class="pos-menu-panel" id="pos-menu-panel">
+          <div class="menu-search-bar" id="menu-search-bar">
+            <div class="search-input-wrap">
+              <span class="search-icon">🔍</span>
+              <input type="search" id="menu-search-input" class="menu-search-input"
+                placeholder="بحث سريع في الأصناف (+400 صنف) أو الباركود..." data-i18n-placeholder="search_menu_ph"
+                autocomplete="off">
+              <button type="button" id="menu-search-clear" class="search-clear-btn hidden">&times;</button>
+            </div>
+            <div class="station-badge-wrap">
+              <select id="pos-station-select" class="pos-station-select" title="محطة الكاشير / الطابعة الحالية">
+                <option value="cashier_floor1">📍 كاشير الدور 1</option>
+                <option value="cashier_floor2">📍 كاشير الدور 2</option>
+                <option value="waiter_mobile">📱 نادل جوال</option>
+              </select>
+            </div>
+          </div>
+          <div class="category-tabs" id="category-tabs"></div>
+          <div class="menu-grid" id="menu-grid"></div>
+        </div>
+        <div class="pos-order-panel" id="pos-order-panel">
+          <div class="order-header">
+            <div class="order-info">
+              <span class="order-number" id="current-order-number" data-i18n="new_order">طلب جديد</span>
+            </div>
+            <div class="order-type-buttons">
+              <button type="button" class="btn btn-type active" data-type="dine_in"><span class="type-icon">🍽️</span><span class="type-label" data-i18n="dine_in">داخل المطعم</span></button>
+              <button type="button" class="btn btn-type" data-type="takeaway"><span class="type-icon">🥡</span><span class="type-label" data-i18n="takeaway">سفري</span></button>
+              <button type="button" class="btn btn-type" data-type="delivery"><span class="type-icon">🛵</span><span class="type-label" data-i18n="delivery">توصيل</span></button>
+              <div class="table-select-wrapper">
+                <span class="type-icon">🪑</span>
+                <select id="table-select" class="table-select-inline"></select>
+              </div>
+            </div>
+            <div id="customer-select-row" style="display:none; gap:5px; margin-top:5px;">
+              <select id="customer-select" class="form-control" style="flex:1;">
+                <option value="">-- اختيار عميل --</option>
+              </select>
+              <button class="btn btn-secondary" onclick="openCustomerModal()" style="padding:5px;">➕</button>
+            </div>
+          </div>
+          <div class="order-items" id="order-items">
+            <div class="empty-order" data-i18n="add_items">أضف عناصر من القائمة</div>
+          </div>
+          <div class="order-footer">
+            <div class="order-note">
+              <input type="text" id="order-note" data-i18n-placeholder="order_note_ph"
+                placeholder="ملاحظة على الطلب...">
+            </div>
+            <div class="order-totals">
+              <div class="total-row payment-select-row">
+                <span data-i18n="payment_method">طريقة الدفع</span>
+                <button type="button" class="btn" id="btn-select-payment" style="min-width:120px; font-weight:bold;">💵 <span data-i18n="payment_cash">نقداً (كاش)</span></button>
+              </div>
+              <div class="total-row"><span data-i18n="subtotal">المجموع</span><span id="order-subtotal">0</span> <span
+                  class="currency" data-i18n="currency">ريال</span></div>
+              <div class="total-row discount-row">
+                <span data-i18n="discount">خصم %</span>
+                <input type="number" id="discount-input" value="0" min="0" max="100" class="discount-input">
+                <span id="order-discount-val">0</span> <span class="currency" data-i18n="currency">ريال</span>
+              </div>
+              <div class="total-row grand-total"><span data-i18n="total">الإجمالي</span><span id="order-total">0</span>
+                <span class="currency" data-i18n="currency">ريال</span></div>
+              <div class="total-row cash-calc-row" id="cash-calc-row">
+                <span data-i18n="cash_received">المبلغ المدفوع</span>
+                <div class="cash-input-wrap">
+                  <input type="number" id="cash-received-input" placeholder="0.00" class="cash-received-input"
+                    step="any">
+                  <div class="quick-cash-chips" id="quick-cash-chips">
+                    <button type="button" class="cash-chip" data-val="exact" data-i18n="exact">المبلغ تماماً</button>
+                    <button type="button" class="cash-chip" data-val="100">+100</button>
+                    <button type="button" class="cash-chip" data-val="500">+500</button>
+                    <button type="button" class="cash-chip" data-val="1000">+1000</button>
+                  </div>
+                </div>
+              </div>
+              <div class="total-row change-row" id="change-row">
+                <span data-i18n="change_due">الباقي للعميل</span>
+                <span class="change-val" id="order-change-val">0.00</span> <span class="currency"
+                  data-i18n="currency">ريال</span>
+              </div>
+            </div>
+            <div class="order-actions">
+              <button class="btn btn-save" id="btn-save-order" data-i18n="save_order">حفظ الطلب</button>
+              <button class="btn btn-print" id="btn-print-order" data-i18n="print">طباعة</button>
+              <button class="btn btn-new" id="btn-new-order" data-i18n="new">جديد</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tables View -->
+    <div id="view-tables" class="view">
+      <div class="tables-container" id="tables-container"></div>
+    </div>
+
+    <!-- Active Orders View -->
+    <div id="view-active-orders" class="view">
+      <div class="active-orders-list" id="active-orders-list"></div>
+    </div>
+
+    <!-- Invoices View -->
+    <div id="view-invoices" class="view">
+      <div class="view-content-wrapper">
+        <div class="admin-toolbar">
+          <input type="date" id="invoice-date-filter">
+          <select id="invoice-employee-filter">
+            <option value="" data-i18n="all_employees">كل الموظفين</option>
+          </select>
+          <input type="number" id="invoice-search" data-i18n-placeholder="invoice_number_ph" placeholder="رقم الفاتورة"
+            style="width:140px;">
+          <button class="btn" onclick="loadInvoices()" data-i18n="load">عرض</button>
+        </div>
+        <div id="invoices-list" class="invoices-scroll-area"></div>
+      </div>
+    </div>
+
+    <!-- Dashboard View (Advanced Analytics) -->
+    <div id="view-dashboard" class="view">
+      <div class="view-content-wrapper">
+        <div class="admin-toolbar">
+          <label data-i18n="from">من</label>
+          <input type="date" id="dash-from">
+          <label data-i18n="to">إلى</label>
+          <input type="date" id="dash-to">
+          <select id="dash-employee-filter">
+            <option value="" data-i18n="all_employees">كل الموظفين</option>
+          </select>
+          <button class="btn" onclick="loadDashboard()" data-i18n="load">عرض</button>
+        </div>
+        <div id="dashboard-content" class="dashboard-scroll-area" style="padding: 20px;">
+          <!-- Chart Containers -->
+          <div style="display:flex; gap:20px; flex-wrap:wrap; margin-bottom:20px;">
+            <div style="flex:1; min-width:300px; background:var(--bg-card); padding:15px; border-radius:8px;">
+              <canvas id="salesTrendChart"></canvas>
+            </div>
+            <div style="flex:1; min-width:300px; background:var(--bg-card); padding:15px; border-radius:8px;">
+              <canvas id="paymentMethodChart"></canvas>
+            </div>
+          </div>
+          <div style="display:flex; gap:20px; flex-wrap:wrap;">
+            <div style="flex:1; min-width:300px; background:var(--bg-card); padding:15px; border-radius:8px;">
+              <canvas id="employeeSalesChart"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Admin View -->
+    <div id="view-admin" class="view">
+      <div class="admin-layout">
+        <div class="admin-sidebar">
+          <button class="admin-tab active" data-admin="menu-admin" data-i18n="admin_menu">المنيو</button>
+          <button class="admin-tab" data-admin="modifiers-admin" data-i18n="admin_modifiers">الإضافات</button>
+          <button class="admin-tab" data-admin="inventory-admin" data-i18n="admin_inventory">المخزون</button>
+          <button class="admin-tab" data-admin="employees-admin" data-i18n="admin_employees">الموظفين</button>
+          <button class="admin-tab" data-admin="tables-admin" data-i18n="admin_tables">الطاولات</button>
+          <button class="admin-tab" data-admin="daily-closing-admin" data-i18n="admin_daily_closing">الإغلاق
+            اليومي</button>
+          <button class="admin-tab" data-admin="audit-admin" data-i18n="admin_audit">التدقيق</button>
+          <button class="admin-tab" data-admin="settings-admin" data-i18n="admin_settings">الإعدادات</button>
+          <button class="admin-tab" data-admin="reports-admin" data-i18n="admin_reports">التقارير</button>
+          <button class="admin-tab" data-admin="backup-admin" data-i18n="admin_backup">💾 النسخ</button>
+          <button class="admin-tab" data-admin="help-admin" data-i18n="admin_help">❓ مساعدة</button>
+        </div>
+        <div class="admin-content">
+          <div id="admin-menu-admin" class="admin-panel active">
+            <div class="menu-admin-header-row">
+              <h2 data-i18n="admin_menu" style="margin:0;">إدارة وتعديل المنيو</h2>
+              <div class="admin-toolbar" style="margin-bottom:0;">
+                <button class="btn" id="btn-add-category" data-i18n="add_category">📁 + قسم جديد</button>
+                <button class="btn btn-save" id="btn-add-item" data-i18n="add_item">🍽️ + صنف جديد</button>
+              </div>
+            </div>
+
+            <!-- Categories Management Table -->
+            <div id="categories-admin-section">
+              <h3 style="margin:12px 0 8px;font-size:14px;">📋 إدارة الأقسام</h3>
+              <div class="admin-table-wrapper">
+                <table class="admin-table" id="categories-admin-table">
+                  <thead>
+                    <tr>
+                      <th style="width:50px;">الأيقونة</th>
+                      <th>الاسم (عربي)</th>
+                      <th>الاسم (إنجليزي)</th>
+                      <th style="width:60px;">الترتيب</th>
+                      <th style="width:60px;">الأصناف</th>
+                      <th style="width:140px;">إجراءات</th>
+                    </tr>
+                  </thead>
+                  <tbody id="categories-admin-tbody"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Category Tabs Filter for Easy Navigation -->
+            <div class="menu-admin-cat-filter" id="menu-admin-cat-filter">
+              <!-- Dynamic Category Pills -->
+            </div>
+
+            <!-- Search & Controls Bar -->
+            <div class="menu-admin-controls-bar">
+              <div class="menu-admin-search-wrap">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="menu-admin-search" placeholder="ابحث عن صنف بالاسم أو السعر..."
+                  oninput="filterMenuAdminTable()">
+                <button type="button" class="search-clear-btn" id="menu-admin-search-clear"
+                  onclick="clearMenuAdminSearch()" style="display:none;">✕</button>
+              </div>
+              <div class="menu-admin-stats-badge" id="menu-admin-stats-badge">
+                عدد الأصناف: <strong id="menu-admin-item-count">0</strong>
+              </div>
+            </div>
+
+            <div class="admin-table-wrapper">
+              <table class="admin-table" id="menu-admin-table">
+                <thead>
+                  <tr>
+                    <th style="width:70px;">الصورة</th>
+                    <th data-i18n="th_name">اسم الصنف</th>
+                    <th data-i18n="th_category">القسم</th>
+                    <th data-i18n="th_price" style="width:140px;">السعر (تعديل سريع)</th>
+                    <th data-i18n="th_status" style="width:100px;">الحالة</th>
+                    <th data-i18n="th_actions" style="width:160px;">إجراءات</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Inventory Admin Panel -->
+          <div id="admin-inventory-admin" class="admin-panel">
+            <div class="menu-admin-header-row">
+              <h2>إدارة المخزون</h2>
+              <button class="btn btn-primary" onclick="openInventoryModal()">إضافة صنف للمخزون</button>
+            </div>
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>الصنف (Menu Item)</th>
+                  <th>اسم المخزون</th>
+                  <th>الكمية</th>
+                  <th>الوحدة</th>
+                  <th>حد التنبيه</th>
+                  <th>تعديل الرصيد</th>
+                </tr>
+              </thead>
+              <tbody id="inventory-table-body"></tbody>
+            </table>
+          </div>
+
+          <!-- Employees Admin Panel -->
+          <div id="admin-modifiers-admin" class="admin-panel">
+            <div class="menu-admin-header-row">
+              <h2 data-i18n="admin_modifiers" style="margin:0;">إدارة الإضافات (الخيارات)</h2>
+              <div class="admin-toolbar" style="margin-bottom:0;">
+                <button class="btn btn-save" id="btn-add-modifier" data-i18n="add_modifier">➕ إضافة جديدة</button>
+              </div>
+            </div>
+            <div class="admin-table-wrapper">
+              <table class="admin-table" id="modifiers-admin-table">
+                <thead>
+                  <tr>
+                    <th>اسم الإضافة</th>
+                    <th>المجموعة</th>
+                    <th>تطبيق على صنف</th>
+                    <th>السعر الإضافي</th>
+                    <th>متعدد / إجباري</th>
+                    <th style="width:160px;">إجراءات</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+          <div id="admin-employees-admin" class="admin-panel">
+            <h2 data-i18n="admin_employees">إدارة الموظفين</h2>
+            <div class="admin-toolbar"><button class="btn" id="btn-add-employee" data-i18n="add_employee">+ موظف
+                جديد</button></div>
+            <div class="admin-table-wrapper">
+              <table class="admin-table" id="employees-admin-table">
+                <thead>
+                  <tr>
+                    <th data-i18n="th_name">الاسم</th>
+                    <th data-i18n="th_role">الدور</th>
+                    <th data-i18n="th_permissions">الصلاحيات</th>
+                    <th data-i18n="th_status">الحالة</th>
+                    <th data-i18n="th_actions">إجراءات</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+          <div id="admin-tables-admin" class="admin-panel">
+            <h2 data-i18n="admin_tables">إدارة الطاولات</h2>
+            <div class="admin-toolbar"><button class="btn" id="btn-add-table-admin" data-i18n="add_table">+ طاولة
+                جديدة</button></div>
+            <div class="admin-table-wrapper">
+              <table class="admin-table" id="tables-admin-table">
+                <thead>
+                  <tr>
+                    <th data-i18n="th_number">رقم</th>
+                    <th data-i18n="th_name">الاسم</th>
+                    <th data-i18n="th_capacity">السعة</th>
+                    <th data-i18n="th_status">الحالة</th>
+                    <th data-i18n="th_actions">إجراءات</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+          <div id="admin-daily-closing-admin" class="admin-panel">
+            <h2 data-i18n="admin_daily_closing">الإغلاق اليومي ومطابقة الصناديق</h2>
+            <div class="admin-toolbar" style="gap:8px;flex-wrap:wrap;">
+              <input type="date" id="closing-date">
+              <select id="closing-employee-filter">
+                <option value="" data-i18n="all_employees">كل الموظفين</option>
+              </select>
+              <button class="btn" onclick="loadDailyClosing()" data-i18n="load">🔍 عرض</button>
+              <button class="btn" onclick="printDailyClosingThermal()" style="background:#6c757d;color:#fff;"
+                title="طباعة فورية على الطابعة الحرارية 80mm">🧾 طباعة حرارية (80mm)</button>
+              <button class="btn" onclick="printDailyClosingReport()" style="background:#5a6268;color:#fff;"
+                data-i18n="print_closing">📄 طباعة A4 / PDF</button>
+              <button class="btn btn-save" onclick="closeGrandRestaurantDay()"
+                style="background:linear-gradient(135deg,#721c24,#531118);color:#fff;"
+                title="إغلاق كلي لجميع كاشيرات ونوادل المطعم">
+                🏛️ الإغلاق الكلي للمطعم (كل الموظفين)
+              </button>
+            </div>
+            <div id="closing-content"></div>
+          </div>
+          <div id="admin-audit-admin" class="admin-panel">
+            <h2 data-i18n="admin_audit">نافذة التدقيق</h2>
+            <div class="audit-controls">
+              <select id="audit-employee-filter">
+                <option value="" data-i18n="all_employees">كل الموظفين</option>
+              </select>
+              <select id="audit-action-filter">
+                <option value="" data-i18n="all_actions">كل الإجراءات</option>
+                <option value="create_order">🧾 طلب / فاتورة جديدة</option>
+                <option value="update_order">📝 تعديل فاتورة</option>
+                <option value="delete_order">🗑️ حذف فاتورة</option>
+                <option value="complete_order">✅ إكمال فاتورة</option>
+                <option value="cancel_order">❌ إلغاء طلب</option>
+                <option value="login" data-i18n="action_login">دخول</option>
+                <option value="create" data-i18n="action_create">إضافة صنف/عنصر</option>
+                <option value="update" data-i18n="action_update">تعديل صنف/إعدادات</option>
+                <option value="delete" data-i18n="action_delete">حذف صنف/موظف</option>
+              </select>
+              <input type="date" id="audit-date-filter">
+              <button class="btn" id="btn-load-audit" onclick="loadAuditAdmin()" data-i18n="load">عرض</button>
+            </div>
+            <div class="audit-table-wrapper">
+              <table class="admin-table" id="audit-table">
+                <thead>
+                  <tr>
+                    <th data-i18n="th_time">الوقت</th>
+                    <th data-i18n="th_employee">الموظف</th>
+                    <th data-i18n="th_action">الإجراء</th>
+                    <th data-i18n="th_details">التفاصيل</th>
+                    <th>قبل التعديل (Before)</th>
+                    <th>بعد التعديل (After)</th>
+                    <th>معاينة وطباعة</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+          <div id="admin-settings-admin" class="admin-panel">
+            <h2 data-i18n="admin_settings">الإعدادات</h2>
+            <div class="settings-form">
+              <!-- Server Network Connection Card -->
+              <div class="server-network-card" id="server-network-card">
+                <div class="server-net-header">
+                  <div>
+                    <h3 style="margin:0;color:var(--primary);display:flex;align-items:center;gap:8px;">
+                      <span>🌐</span> رابط اتصال الأجهزة والسيرفر (Server Connection Link)
+                    </h3>
+                    <p style="margin:4px 0 0 0;font-size:13px;color:var(--text-light);">
+                      افتح هذا الرابط في هواتف النوادل وأجهزة الكاشير والأجهزة اللوحية المتصلة بنفس شبكة الواي فاي للربط
+                      فوراً:
+                    </p>
+                  </div>
+                  <button type="button" class="btn btn-save" onclick="refreshNetworkInfo()"
+                    style="padding:6px 14px;font-size:12px;">
+                    🔄 تحديث عنوان IP
+                  </button>
+                </div>
+                <div class="server-net-body">
+                  <div class="server-ip-box">
+                    <div class="server-ip-label">عنوان السيرفر الرئيسي (Server URL):</div>
+                    <div class="server-ip-value-row">
+                      <input type="text" id="server-primary-url" readonly value="http://192.168.8.193:3000"
+                        class="server-ip-input">
+                      <button type="button" class="btn btn-save" onclick="copyServerUrl()" id="btn-copy-server-url"
+                        title="نسخ الرابط">
+                        📋 نسخ الرابط
+                      </button>
+                      <a href="http://192.168.8.193:3000" target="_blank" id="btn-open-server-url" class="btn"
+                        style="background:#28a745;color:#fff;text-decoration:none;display:inline-flex;align-items:center;">
+                        🚀 فتح في نافذة جديدة
+                      </a>
+                    </div>
+                  </div>
+                  <div class="server-interfaces-list" id="server-interfaces-list"></div>
+                </div>
+              </div>
+
+              <h3 data-i18n="restaurant_info">معلومات المطعم</h3>
+              <label data-i18n="restaurant_name_ar">اسم المطعم (عربي)</label><input type="text"
+                id="set-restaurant-name">
+              <label data-i18n="restaurant_name_en">اسم المطعم (إنجليزي)</label><input type="text"
+                id="set-restaurant-name-en">
+              <label data-i18n="restaurant_address">العنوان</label><input type="text" id="set-restaurant-address">
+              <label data-i18n="restaurant_phone">رقم الهاتف</label><input type="text" id="set-restaurant-phone">
+              <label data-i18n="tax_number">الرقم الضريبي</label><input type="text" id="set-tax-number"
+                placeholder="مثال: 300123456700003">
+              <label data-i18n="currency_label">العملة</label><input type="text" id="set-currency">
+              <label data-i18n="business_timezone">المنطقة الزمنية للمنشأة</label><select id="set-business-timezone"><option value="Asia/Bangkok">Thailand — Asia/Bangkok</option><option value="Asia/Riyadh">Saudi Arabia — Asia/Riyadh</option><option value="UTC">UTC</option></select>
+<label data-i18n="tax_rate">نسبة الضريبة %</label><input type="number" id="set-tax-rate" value="0" min="0"
+                max="100">
+              <label data-i18n="receipt_footer">نص الفاتورة</label><input type="text" id="set-receipt-footer">
+
+              <h3 data-i18n="delivery_apps_and_payments">تطبيقات التوصيل وطرق الدفع</h3>
+              <div class="admin-toolbar" style="margin-top: 10px;">
+                <button type="button" class="btn btn-primary" data-i18n="manage_delivery_apps" onclick="openManageDeliveryModal()">إدارة طرق التوصيل</button>
+                <button type="button" class="btn btn-primary" data-i18n="manage_payment_methods" onclick="openManagePaymentModal()">إدارة طرق الدفع</button>
+              </div>
+
+              <h3 data-i18n="printers_management_auto">🖨️ إدارة والتعرف التلقائي على الطابعات</h3>
+              <div class="printer-auto-detect-banner">
+                <div class="auto-detect-info">
+                  <strong data-i18n="auto_detect_printers">🔍 الفحص والتعرف التلقائي على الطابعات المتصلة (Auto-Discovery)</strong>
+                  <p style="font-size:12px;color:var(--text-light);margin-top:2px;" data-i18n="auto_detect_printers_desc">يكتشف النظام الطابعات المتصلة بالشبكة المحلية أو USB ويوجهها للأدوار والأقسام مع إمكانية تسميتها وتجربة طباعتها مباشرة:</p>
+                </div>
+                <button type="button" class="btn btn-save" onclick="detectLocalPrinters()" id="btn-scan-printers"
+                  style="flex-shrink:0;" data-i18n="scan_printers_now">
+                  🔄 فحص واكتشاف الطابعات الآن
+                </button>
+              </div>
+
+              <div class="printer-config-cards" id="printer-config-cards" style="margin-top:15px; margin-bottom:15px;">
+                <div style="display:flex; justify-content:flex-end; margin-bottom: 15px;">
+                  <button type="button" class="btn btn-primary" onclick="openPrinterModal()">➕ <span data-i18n="add_new_printer">إضافة طابعة جديدة</span></button>
+                </div>
+                <div class="admin-table-container">
+                  <table class="admin-table">
+                    <thead>
+                      <tr>
+                        <th data-i18n="printer_name">اسم / قسم الطابعة</th>
+                        <th data-i18n="printer_device">الطابعة المربوطة</th>
+                        <th>الأقسام المستلمة</th>
+                        <th data-i18n="printer_auto">طباعة تلقائية</th>
+                        <th data-i18n="actions">إجراءات</th>
+                      </tr>
+                    </thead>
+                    <tbody id="printers-config-tbody">
+                      <!-- Dynamic rows will go here -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <h3 data-i18n="advanced_settings">إعدادات متقدمة</h3>
+              <label data-i18n="invoice_retention">مدة حفظ الفواتير (أيام)</label><input type="number" id="set-invoice-retention" value="365" min="30">
+
+              <button class="btn btn-save" id="btn-save-settings" onclick="saveSettings()" data-i18n="save">حفظ</button>
+            </div>
+          </div>
+          <div id="admin-reports-admin" class="admin-panel">
+            <h2 data-i18n="admin_reports">التقارير اليومية والمبيعات</h2>
+            <div class="admin-toolbar">
+              <label data-i18n="from">من</label>
+              <input type="date" id="report-from">
+              <label data-i18n="to">إلى</label>
+              <input type="date" id="report-to">
+              <select id="report-employee-filter">
+                <option value="" data-i18n="all_employees">كل الموظفين</option>
+              </select>
+              <button class="btn" id="btn-load-report" onclick="loadAdminReport()" data-i18n="load">عرض التقرير</button>
+              <button class="btn btn-save" onclick="printAdminReport()" data-i18n="print_report">🖨️ طباعة
+                التقرير</button>
+            </div>
+            <div class="report-content" id="report-content"></div>
+          </div>
+        </div>
+
+          <!-- Backup & Restore Panel -->
+          <div id="admin-backup-admin" class="admin-panel">
+            <h2 data-i18n="admin_backup">💾 النسخ الاحتياطي والاستعادة</h2>
+            <p style="color:var(--text-light);margin-bottom:20px;" data-i18n="backup_desc">تصدير كامل للبيانات أو استيراد نسخة سابقة بأمان</p>
+
+            <!-- Export Section -->
+            <div style="background:var(--card-bg,#fff);border-radius:12px;padding:24px;margin-bottom:20px;border:1px solid var(--border-color,#eee);">
+              <h3 style="margin:0 0 16px;display:flex;align-items:center;gap:8px;">
+                <span style="font-size:1.5rem">⬇️</span>
+                <span data-i18n="backup_export_title">تصدير البيانات (Export)</span>
+              </h3>
+              <p style="color:var(--text-light);font-size:0.9rem;margin-bottom:16px;" data-i18n="backup_export_desc">تحميل جميع بيانات النظام كملف JSON للحفظ أو النقل</p>
+              <div style="display:flex;gap:12px;flex-wrap:wrap;">
+                <button class="btn btn-save" id="btn-export-backup" onclick="exportBackup()" style="min-width:160px;">
+                  ⬇️ <span data-i18n="backup_export_btn">تصدير الكل</span>
+                </button>
+                <button class="btn btn-primary" onclick="exportOrdersOnly()" style="min-width:160px;">
+                  📊 <span data-i18n="backup_export_orders">تصدير الطلبات فقط</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Import Section -->
+            <div style="background:var(--card-bg,#fff);border-radius:12px;padding:24px;border:1px solid var(--border-color,#eee);">
+              <h3 style="margin:0 0 16px;display:flex;align-items:center;gap:8px;">
+                <span style="font-size:1.5rem">⬆️</span>
+                <span data-i18n="backup_restore_title">استعادة البيانات (Restore)</span>
+              </h3>
+              <p style="color:#e74c3c;font-size:0.9rem;margin-bottom:16px;" data-i18n="backup_restore_warn">⚠️ تحذير: ستتم استبدال البيانات الحالية بالنسخة المختارة. تأكد من عمل نسخة حديثة أولاً.</p>
+              <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+                <label class="btn btn-primary" style="cursor:pointer;min-width:160px;text-align:center;">
+                  📂 <span data-i18n="backup_choose_file">اختر ملف النسخة</span>
+                  <input type="file" id="restore-file-input" accept=".json" style="display:none;" onchange="previewRestoreFile(this)">
+                </label>
+                <button class="btn" id="btn-restore-backup" onclick="restoreBackup()" disabled style="min-width:160px;background:#e74c3c;color:#fff;">
+                  ⬆️ <span data-i18n="backup_restore_btn">استعادة البيانات</span>
+                </button>
+              </div>
+              <div id="restore-preview" style="margin-top:16px;display:none;padding:12px;background:#f8f9fa;border-radius:8px;font-size:0.9rem;border:1px solid #dee2e6;"></div>
+            </div>
+          </div>
+
+          <!-- Help / About Panel -->
+          <div id="admin-help-admin" class="admin-panel">
+            <div style="max-width:680px;margin:0 auto;">
+
+              <!-- Hero Card -->
+              <div style="background:linear-gradient(135deg,#6b1124 0%,#a01830 50%,#c0392b 100%);border-radius:20px;padding:40px 32px;text-align:center;color:white;margin-bottom:24px;box-shadow:0 10px 40px rgba(107,17,36,0.35);">
+                <div style="font-size:4rem;margin-bottom:12px;">🍽️</div>
+                <h1 style="margin:0 0 6px;font-size:1.8rem;letter-spacing:0.5px;" data-i18n="help_app_name">NOKTA POS</h1>
+                <p style="margin:0;opacity:0.85;font-size:1rem;" data-i18n="help_app_version">إصدار 1.0 &mdash; نظام متكامل لإدارة المطعم</p>
+              </div>
+
+              <!-- Developer Card -->
+              <div style="background:var(--card-bg,#fff);border-radius:16px;padding:32px;border:1px solid var(--border-color,#eee);box-shadow:0 4px 20px rgba(0,0,0,0.07);margin-bottom:20px;">
+                <div style="display:flex;align-items:center;gap:20px;margin-bottom:24px;">
+                  <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#6b1124,#c0392b);display:flex;align-items:center;justify-content:center;font-size:2rem;flex-shrink:0;">
+                    👨‍💻
+                  </div>
+                  <div>
+                    <h2 style="margin:0 0 4px;font-size:1.3rem;" data-i18n="help_dev_title">تصميم وتطوير</h2>
+                    <p style="margin:0;font-size:1.15rem;font-weight:700;color:var(--primary-color,#6b1124);">Taha Al-Yafe'i &mdash; طه اليافعي</p>
+                    <p style="margin:4px 0 0;color:var(--text-light);font-size:0.9rem;" data-i18n="help_dev_role">مطوّر برمجيات ومصمّم أنظمة</p>
+                  </div>
+                </div>
+
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                  <!-- WhatsApp button -->
+                  <a href="https://wa.me/967738950505" target="_blank" rel="noopener"
+                    style="display:flex;align-items:center;justify-content:center;gap:10px;padding:14px 20px;background:#25D366;color:white;text-decoration:none;border-radius:12px;font-weight:700;font-size:1rem;transition:transform 0.15s,box-shadow 0.15s;box-shadow:0 4px 15px rgba(37,211,102,0.35);"
+                    onmouseover="this.style.transform='scale(1.03)'" onmouseout="this.style.transform='scale(1)'">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                    <span data-i18n="help_whatsapp">تواصل عبر واتسآب</span>
+                  </a>
+
+                  <!-- Support card -->
+                  <div style="padding:14px 20px;background:var(--bg,#f8f9fa);border-radius:12px;border:1px solid var(--border-color,#eee);text-align:center;">
+                    <div style="font-size:1.5rem;">+967 738 950 505</div>
+                    <div style="color:var(--text-light);font-size:0.85rem;margin-top:4px;" data-i18n="help_support_label">رقم الدعم الفني</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Features list -->
+              <div style="background:var(--card-bg,#fff);border-radius:16px;padding:24px;border:1px solid var(--border-color,#eee);box-shadow:0 4px 20px rgba(0,0,0,0.07);">
+                <h3 style="margin:0 0 16px;" data-i18n="help_features_title">✨ ميزات النظام</h3>
+                <ul style="margin:0;padding-right:20px;line-height:2;color:var(--text-color);">
+                  <li data-i18n="help_f1">📊 لوحة قيادة وتقارير يومية شاملة</li>
+                  <li data-i18n="help_f2">🧩 إدارة طاولات وطلبات متعددة بالتزامن</li>
+                  <li data-i18n="help_f3">🛠️ شاشة مطبخ (KDS) فورية</li>
+                  <li data-i18n="help_f4">🖨️ طباعة حرارية متعددة وتوجيه تلقائي</li>
+                  <li data-i18n="help_f5">💳 دعم طرق دفع متعددة وتطبيقات توصيل</li>
+                  <li data-i18n="help_f6">🌐 تعدد لغوي: عربي / إنجليزي</li>
+                  <li data-i18n="help_f7">💾 نسخ احتياطي واستعادة كامل</li>
+                </ul>
+              </div>
+
+            </div>
+          </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Modifier Selection Modal -->
+  <div id="modifier-modal" class="modal-overlay">
+    <div class="modal" style="max-width: 500px;">
+      <div class="modal-header">
+        <h2 id="modifier-item-name">Select Options</h2>
+        <button class="close-btn" onclick="document.getElementById('modifier-modal').classList.remove('open')">✕</button>
+      </div>
+      <div class="modal-body" id="modifier-groups-container" style="max-height: 60vh; overflow-y: auto;">
+        <!-- Modifier groups will be injected here -->
+      </div>
+      <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center;">
+        <div style="font-size: 1.2rem; font-weight: bold;">
+          المجموع: <span id="modifier-total-price">0.00</span>
+        </div>
+        <button class="btn btn-primary" id="btn-add-modifier-item">إضافة للطلب</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal -->
+  <div class="modal-overlay" id="modal-overlay">
+    <div class="modal" id="modal">
+      <div class="modal-header">
+        <h3 id="modal-title"></h3><button class="modal-close" id="modal-close">&times;</button>
+      </div>
+      <div class="modal-body" id="modal-body"></div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- Inventory Modal -->
+  <div class="modal-overlay" id="inventory-modal" style="display:none; z-index:9999;">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>إضافة / تعديل المخزون</h2>
+        <button class="modal-close" onclick="closeInventoryModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="inv-id">
+        <div class="form-group">
+          <label>الارتباط بصنف منيو (Menu Item)</label>
+          <select id="inv-menu-item-id" class="form-control"></select>
+        </div>
+        <div class="form-group">
+          <label>اسم صنف المخزون (Inventory Name) *</label>
+          <input type="text" id="inv-item-name" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <label>الكمية الحالية (Current Qty)</label>
+          <input type="number" id="inv-quantity" class="form-control" step="0.01">
+        </div>
+        <div class="form-group">
+          <label>الوحدة (Unit)</label>
+          <select id="inv-unit" class="form-control">
+            <option value="pcs">حبة (pcs)</option>
+            <option value="kg">كيلو (kg)</option>
+            <option value="g">جرام (g)</option>
+            <option value="l">لتر (L)</option>
+            <option value="ml">مل (ml)</option>
+            <option value="box">كرتون (box)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>حد التنبيه (Alert Level)</label>
+          <input type="number" id="inv-min-alert" class="form-control" step="0.01" value="5">
+        </div>
+      </div>
+      <div class="modal-footer" style="padding:15px; text-align:right;">
+        <button class="btn btn-secondary" onclick="closeInventoryModal()">إلغاء</button>
+        <button class="btn btn-primary" onclick="saveInventoryItem()">حفظ</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Adjust Stock Modal -->
+  <div class="modal-overlay" id="adjust-stock-modal" style="display:none; z-index:9999;">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>تعديل رصيد المخزون</h2>
+        <button class="modal-close" onclick="closeAdjustStockModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="adj-inv-id">
+        <p><strong>الصنف:</strong> <span id="adj-item-name"></span></p>
+        <p><strong>الرصيد الحالي:</strong> <span id="adj-current-qty"></span></p>
+        <div class="form-group">
+          <label>التغيير (Change) <small>ضع رقم سالب للخصم</small></label>
+          <input type="number" id="adj-change" class="form-control" step="0.01" placeholder="e.g. 10 or -5">
+        </div>
+        <div class="form-group">
+          <label>ملاحظات (Notes)</label>
+          <input type="text" id="adj-notes" class="form-control" placeholder="سبب التعديل">
+        </div>
+      </div>
+      <div class="modal-footer" style="padding:15px; text-align:right;">
+        <button class="btn btn-secondary" onclick="closeAdjustStockModal()">إلغاء</button>
+        <button class="btn btn-primary" onclick="saveStockAdjustment()">حفظ التعديل</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Customer Modal -->
+  <div class="modal-overlay" id="customer-modal" style="display:none; z-index:9999;">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>إضافة عميل جديد</h2>
+        <button class="modal-close" onclick="closeCustomerModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>الاسم (Name) *</label>
+          <input type="text" id="cust-name" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <label>رقم الجوال (Phone) *</label>
+          <input type="text" id="cust-phone" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <label>البريد الإلكتروني (Email)</label>
+          <input type="email" id="cust-email" class="form-control">
+        </div>
+      </div>
+      <div class="modal-footer" style="padding:15px; text-align:right;">
+        <button class="btn btn-secondary" onclick="closeCustomerModal()">إلغاء</button>
+        <button class="btn btn-primary" onclick="saveCustomer()">حفظ العميل</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delivery Method Selection Modal (POS) -->
+  <div class="modal-overlay" id="delivery-select-modal" style="display:none; z-index:9999;">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>اختر تطبيق التوصيل</h2>
+        <button class="modal-close" onclick="closeDeliverySelectModal()">&times;</button>
+      </div>
+      <div class="modal-body" style="text-align: center;">
+        <div id="delivery-buttons-container" style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin: 20px 0;">
+          <!-- Dynamically populated buttons -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Payment Method Selection Modal (POS) -->
+  <div class="modal-overlay" id="payment-select-modal" style="display:none; z-index:9999;">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>اختر طريقة الدفع</h2>
+        <button class="modal-close" onclick="closePaymentSelectModal()">&times;</button>
+      </div>
+      <div class="modal-body" style="text-align: center;">
+        <div id="payment-buttons-container" style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin: 20px 0;">
+          <!-- Dynamically populated buttons -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Manage Dynamic Methods Modal (Admin) -->
+  <div class="modal-overlay" id="manage-methods-modal" style="display:none; z-index:9999;">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="manage-methods-title">إدارة الطرق</h2>
+        <button class="modal-close" onclick="closeManageMethodsModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="admin-toolbar" style="margin-bottom: 10px;">
+          <input type="text" id="new-method-id" data-i18n-placeholder="method_id_ph" placeholder="المعرف (e.g. grab)" style="width: 30%;">
+          <input type="text" id="new-method-name" data-i18n-placeholder="method_name_ph" placeholder="الاسم الظاهر (e.g. GrabFood)" style="width: 50%;">
+          <button class="btn btn-primary" data-i18n="add" onclick="addDynamicMethod()">إضافة</button>
+        </div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th data-i18n="th_id">المعرف (ID)</th>
+              <th data-i18n="th_name">الاسم (Name)</th>
+              <th data-i18n="th_status">الحالة</th>
+              <th data-i18n="th_actions">إجراءات</th>
+            </tr>
+          </thead>
+          <tbody id="manage-methods-table-body">
+            <!-- Dynamically populated -->
+          </tbody>
+        </table>
+      </div>
+      <div class="modal-footer" style="padding:15px; text-align:right;">
+        <button class="btn btn-save" data-i18n="save_changes" onclick="saveManagedMethods()">حفظ التغييرات</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Printer Configuration Modal -->
+  <div id="printer-modal" class="modal-overlay">
+    <div class="modal" style="max-width: 500px;">
+      <div class="modal-header">
+        <h2 id="printer-modal-title" data-i18n="add_new_printer">إضافة طابعة جديدة</h2>
+        <button class="close-btn" onclick="document.getElementById('printer-modal').classList.remove('open')">✕</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="printer-modal-index" value="-1">
+        
+        <label style="display:block;margin-bottom:5px;" data-i18n="printer_name_label">الاسم المخصص للقسم (مثال: مطبخ الشواية):</label>
+        <input type="text" id="printer-modal-name" class="form-input" style="width:100%;margin-bottom:15px;" placeholder="اسم الطابعة">
+        
+        <label style="display:block;margin-bottom:5px;" data-i18n="printer_device_label">الطابعة المكتشفة:</label>
+        <div style="display:flex; gap: 8px; margin-bottom: 15px;">
+          <select id="printer-modal-device" class="form-input printer-device-select" style="flex:1;">
+            <option value="">-- اختر طابعة --</option>
+          </select>
+          <button type="button" class="btn" style="flex-shrink:0;" onclick="detectLocalPrinters()">🔄</button>
+        </div>
+
+        <label style="display:flex;align-items:center;gap:8px;margin-bottom:15px;cursor:pointer;">
+          <input type="checkbox" id="printer-modal-auto"> 
+          <span data-i18n="printer_auto_print_label">طباعة تلقائية للطلبات الموجهة لهذا القسم</span>
+        </label>
+        <label style="display:block;margin-bottom:7px;font-weight:600;">الأقسام التي تطبع على هذه الطابعة</label>
+        <p style="margin:0 0 8px;font-size:12px;color:var(--text-light);">اختر أقسام المنيو؛ ستصل للطابعة أصناف هذه الأقسام فقط.</p>
+        <div id="printer-modal-categories" style="max-height:190px;overflow:auto;border:1px solid var(--border);border-radius:8px;padding:8px;"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-save" style="width: 100%;" onclick="savePrinterConfig()" data-i18n="save">حفظ الطابعة</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="vendor/chart.umd.min.js?v=74"></script>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="js/safety.js?v=74"></script>
+  <script src="i18n.js?v=74"></script>
+  <script src="js/app.js?v=74"></script>
+  <script src="js/orders.js?v=74"></script>
+  <script src="js/menu.js?v=74"></script>
+  <script src="js/tables.js?v=74"></script>
+  <script src="js/admin.js?v=74"></script>
+  <script src="js/inventory.js?v=74"></script>
+  <script src="js/dashboard.js?v=74"></script>
+  <script src="js/employees.js?v=74"></script>
+  <script src="js/settings.js?v=74"></script>
+  <script src="js/invoices.js?v=74"></script>
+  <script src="js/daily-closing.js?v=74"></script>
+  <script src="js/sales.js?v=74"></script>
+  <script src="js/audit.js?v=74"></script>
+  <script src="js/reports.js?v=74"></script>
+  <script>
+    // Register Service Worker for PWA
+    if ('serviceWorker' in navigator) {
+      let refreshingForUpdate = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (refreshingForUpdate) return;
+        refreshingForUpdate = true;
+        window.location.reload();
+      });
+      navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' })
+        .then(reg => {
+          console.log('SW registered:', reg.scope);
+          reg.update();
+        })
+        .catch(err => console.error('SW registration failed:', err));
+
+      // Listen for sync complete messages
+      navigator.serviceWorker.addEventListener('message', event => {
+        if (event.data.type === 'SYNC_COMPLETE') {
+          showSyncStatus('synced');
+          toast('تمت المزامنة بنجاح', 'success');
+        }
+      });
+    }
+
+    // Online/Offline detection
+    window.addEventListener('online', () => {
+      document.getElementById('offline-bar').classList.add('hidden');
+      showSyncStatus('syncing');
+      // Trigger background sync
+      if ('serviceWorker' in navigator && 'SyncManager' in window) {
+        navigator.serviceWorker.ready.then(reg => reg.sync.register('sync-orders'));
+      }
+    });
+
+    window.addEventListener('offline', () => {
+      document.getElementById('offline-bar').classList.remove('hidden');
+      showSyncStatus('offline');
+    });
+
+    function showSyncStatus(status) {
+      const el = document.getElementById('sync-status');
+      if (status === 'online') el.textContent = '✓';
+      else if (status === 'offline') el.textContent = '⚡';
+      else if (status === 'syncing') el.textContent = '↻';
+      else if (status === 'synced') el.textContent = '✓';
+      el.className = 'sync-status ' + status;
+    }
+  </script>
+</body>
+
+</html>

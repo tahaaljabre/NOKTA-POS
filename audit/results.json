@@ -1,0 +1,126 @@
+{
+  "date": "2026-09-07",
+  "database": ":memory:",
+  "findings": [
+    {
+      "id": "BASELINE",
+      "detail": "Unauthenticated orders blocked; cashier reports blocked"
+    },
+    {
+      "id": "FRACTIONAL_QUANTITY",
+      "detail": {
+        "quantity": 1.5,
+        "total": 2,
+        "expected": 3
+      }
+    },
+    {
+      "id": "NEGATIVE_DISCOUNT",
+      "detail": {
+        "discount": -100,
+        "total": 8
+      }
+    },
+    {
+      "id": "COMPLETED_STOCK",
+      "detail": {
+        "status": 200,
+        "stock": 100,
+        "expected": 98
+      }
+    },
+    {
+      "id": "PARTIAL_CREATE",
+      "detail": {
+        "status": 500,
+        "extraOrders": 1
+      }
+    },
+    {
+      "id": "SQL_DIALECT_TABLES",
+      "detail": {
+        "status": 500,
+        "error": "no such column: \"occupied\" - should this be a string literal in single-quotes?"
+      }
+    },
+    {
+      "id": "CANCEL_WITH_POS_ONLY",
+      "detail": 200
+    },
+    {
+      "id": "INVOICE_PERMISSION_BYPASS",
+      "detail": {
+        "status": 200,
+        "rows": 1
+      }
+    },
+    {
+      "id": "INVOICE_EDIT_ROUTE_MISSING",
+      "detail": 404
+    },
+    {
+      "id": "SQL_DIALECT_SYNC",
+      "detail": {
+        "status": 500,
+        "error": "no such column: \"now\" - should this be a string literal in single-quotes?"
+      }
+    },
+    {
+      "id": "SYNC_TOTAL_DRIFT",
+      "detail": {
+        "synced": {
+          "id": 8,
+          "total": 3.3,
+          "subtotal": 0,
+          "discount_amount": 0,
+          "tax_percent": 0
+        },
+        "afterNoteEdit": 4
+      }
+    },
+    {
+      "id": "SYNC_INVALID_ITEM_RESPONSE",
+      "detail": {
+        "error": "no such column: \"now\" - should this be a string literal in single-quotes?"
+      }
+    },
+    {
+      "id": "BACKUP_ROUNDTRIP",
+      "detail": {
+        "error": "Restore failed: Spread syntax requires ...iterable[Symbol.iterator] to be a function"
+      }
+    },
+    {
+      "id": "RESTORE_DATA_LOSS",
+      "detail": {
+        "status": 500,
+        "itemsBefore": 15,
+        "itemsAfter": 0,
+        "ordersAfter": 0
+      }
+    },
+    {
+      "id": "MISSING_STOCK_LOG_ROUTE",
+      "detail": {
+        "status": 200,
+        "body": "<!DOCTYPE html>\n<html lang=\"ar\" dir=\"rtl\">\n\n<head>\n  <meta charset=\"UTF-8\">\n  <m"
+      }
+    },
+    {
+      "id": "QUEUE_DELETED_ON_401",
+      "detail": true
+    },
+    {
+      "id": "SERVICE_WORKER_STORAGE",
+      "detail": "getDeviceId throws: localStorage is not defined"
+    },
+    {
+      "id": "STORED_HTML_SINK",
+      "detail": "Order note rendered as raw event-handler HTML (DOM stub, no browser execution)"
+    },
+    {
+      "id": "SETUP_REOPENS_AFTER_ADMIN_DISABLED",
+      "detail": 201
+    }
+  ]
+}
