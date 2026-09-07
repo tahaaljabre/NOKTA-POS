@@ -9,7 +9,8 @@ const { initSocket } = require('./src/socket/socket.handler');
 
 async function startServer() {
   if(!!config.tlsKeyPath!==!!config.tlsCertPath)throw new Error('Both TLS_KEY_PATH and TLS_CERT_PATH are required');
-  if(process.env.NODE_ENV==='production' && !config.tlsKeyPath)throw new Error('Production LAN requires TLS_KEY_PATH and TLS_CERT_PATH');
+  const behindManagedHttpsProxy = Boolean(process.env.RAILWAY_ENVIRONMENT || process.env.RAILWAY_PROJECT_ID || process.env.RAILWAY_SERVICE_ID);
+  if(process.env.NODE_ENV==='production' && !config.tlsKeyPath && !behindManagedHttpsProxy)throw new Error('Production LAN requires TLS_KEY_PATH and TLS_CERT_PATH');
   // 1. Initialize SQLite Database & Migrations
   await initDatabase();
   const automaticBackups = config.dbPath === ':memory:'
