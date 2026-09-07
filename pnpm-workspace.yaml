@@ -1,3 +1,4 @@
-allowBuilds: { electron-winstaller: set this to true or false }
+packages:
+  - '.'
 overrides:
   qs: 6.16.0
