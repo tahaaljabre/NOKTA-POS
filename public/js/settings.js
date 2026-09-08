@@ -128,39 +128,42 @@ async function detectLocalPrinters() {
   }
 
   try {
-    // Desktop mode reads the real Windows printer inventory. Windows includes
-    // USB, paired Bluetooth, and installed TCP/IP/network printers in this list.
-    if (window.noktaDesktop?.listPrinters) {
-      detectedPrintersList = await window.noktaDesktop.listPrinters();
-    } else {
-      // Browsers are intentionally not allowed to enumerate computer printers.
-      // Keep only USB devices previously authorised by the user, if any.
-      detectedPrintersList = [];
-      if ('usb' in navigator) {
-        const devices = await navigator.usb.getDevices();
-        detectedPrintersList = devices.map((device, index) => ({
-          id: `usb-${device.vendorId}-${device.productId}-${index}`,
-          name: device.productName || `USB device ${index + 1}`,
-          device: device.productName || `USB device ${index + 1}`,
-          type: 'usb'
-        }));
+    const data = await api('/api/print/scan');
+    detectedPrintersList = [];
+    
+    if (data.usb && data.usb.length) {
+        data.usb.forEach(d => detectedPrintersList.push({ name: d.name, device: JSON.stringify({type:'usb', vendorId: d.vendorId, productId: d.productId}), type: 'usb' }));
       }
-    }
+      if (data.network && data.network.length) {
+        data.network.forEach(d => detectedPrintersList.push({ name: d.name, device: JSON.stringify({type:'network', address: d.address}), type: 'network' }));
+      }
+      if (data.bluetooth && data.bluetooth.length) {
+        data.bluetooth.forEach(d => {
+            if (d.type === 'bluetooth_hint') {
+                detectedPrintersList.push({ name: d.name, device: '', type: 'hint' });
+            } else {
+                detectedPrintersList.push({ name: d.name, device: JSON.stringify({type:'bluetooth', address: d.address}), type: 'bluetooth' });
+            }
+        });
+      }
+      
+      // Add manual entry option for Network printers that weren't discovered
+      detectedPrintersList.push({ name: '➕ إضافة طابعة شبكة يدوياً (IP)', device: 'manual_network', type: 'network' });
 
     const selectEl = document.getElementById('printer-modal-device');
     if (selectEl) {
       selectEl.innerHTML = '<option value="">-- اختر طابعة من المكتشفة --</option>' +
-      detectedPrintersList.map(p => '<option value="' + p.device + '" data-name="' + p.name + '">🖨️ ' + p.name + (p.isDefault ? ' (افتراضية)' : '') + '</option>').join('');
+      detectedPrintersList.map(p => '<option value=\'' + p.device + '\' data-name="' + p.name + '">🖨️ ' + p.name + '</option>').join('');
     }
 
-    if (!detectedPrintersList.length) {
-      toast(currentLang === 'ar' ? 'لم يتم العثور على طابعات. أضف الطابعة من إعدادات ويندوز ثم أعد الفحص.' : 'No printers found. Add the printer in Windows, then scan again.', 'info');
+    if (detectedPrintersList.length <= 1) { // 1 because we always add "Manual Network"
+      toast(currentLang === 'ar' ? 'لم يتم العثور على طابعات USB مدعومة. للـ USB تأكد من تحويل تعريف الطابعة إلى WinUSB باستخدام Zadig. أو اختر طابعة شبكة يدوياً.' : 'No supported printers found.', 'info');
     } else {
-      toast(currentLang === 'ar' ? `✅ تم العثور على ${detectedPrintersList.length} طابعة من النظام.` : `✅ Found ${detectedPrintersList.length} system printers.`, 'success');
+      toast(currentLang === 'ar' ? `✅ تم العثور على ${detectedPrintersList.length - 1} طابعة.` : `✅ Found ${detectedPrintersList.length - 1} system printers.`, 'success');
     }
   } catch (err) {
     console.error('Printer scan error:', err);
-    toast(currentLang==='ar' ? 'تم فحص المنافذ وجلب الطابعات المتاحة' : 'Scanned ports and loaded available printers', 'info');
+    toast(currentLang === 'ar' ? 'خطأ أثناء فحص الطابعات.' : 'Error scanning for printers.', 'error');
   } finally {
     if (btn) {
       btn.disabled = false;

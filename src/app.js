@@ -18,6 +18,7 @@ const dailyClosingRoutes = require('./routes/daily-closing.routes');
 const reportsRoutes = require('./routes/reports.routes');
 const employeesRoutes = require('./routes/employees.routes');
 const settingsRoutes = require('./routes/settings.routes');
+const printRoutes = require('./routes/print.routes');
 const syncRoutes = require('./routes/sync.routes');
 const backupRoutes = require('./routes/backup.routes');
 const { requirePermission } = require('./middleware/auth.middleware');
@@ -105,6 +106,7 @@ function createApp() {
   app.use('/api/reports', reportsRoutes);
   app.use('/api/employees', employeesRoutes);
   app.use('/api/settings', settingsRoutes);
+  app.use('/api/print', printRoutes);
   app.get('/api/audit', requirePermission('audit'), settingsRoutes.handleAuditGet);
   app.use('/api/sync', syncRoutes);
   app.use('/api/backup', backupRoutes);
