@@ -12,7 +12,7 @@ async function loadDashboard() {
     if (empId) url += `&employee_id=${empId}`;
     
     const data = await api(url);
-    
+    renderDashboardSummary(data);
     renderSalesTrendChart(data.daily);
     renderPaymentMethodChart(data.by_payment);
     renderEmployeeSalesChart(data.by_employee);
@@ -20,6 +20,46 @@ async function loadDashboard() {
     console.error('Failed to load dashboard:', err);
     toast(t('error') + ': ' + (err.message || ''), 'error');
   }
+}
+
+function formatDashboardMoney(value) {
+  return `${Number(value || 0).toLocaleString(currentLang === 'ar' ? 'ar-SA' : 'en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${getCurrency()}`;
+}
+
+function renderDashboardSummary(report) {
+  const channels = Object.fromEntries((report.by_channel || []).map(row => [row.channel, row]));
+  const set = (id, value) => { const element = document.getElementById(id); if (element) element.textContent = value; };
+  set('dash-total-revenue', formatDashboardMoney(report.totals?.total_revenue));
+  set('dash-total-orders', `${report.totals?.total_orders || 0} ${t('orders_count')}`);
+  set('dash-cash-sales', formatDashboardMoney(channels.cash?.total));
+  set('dash-cash-orders', `${channels.cash?.count || 0} ${t('orders_count')}`);
+  set('dash-network-sales', formatDashboardMoney(channels.network?.total));
+  set('dash-network-orders', `${channels.network?.count || 0} ${t('orders_count')}`);
+  set('dash-delivery-sales', formatDashboardMoney(channels.delivery?.total));
+  set('dash-delivery-orders', `${channels.delivery?.count || 0} ${t('orders_count')}`);
+  set('dashboard-period-label', `${report.from} → ${report.to} · ${report.timezone || ''}`);
+}
+
+function dashboardDateString(date) {
+  return date.toISOString().slice(0, 10);
+}
+
+function setDashboardRange(rangeName) {
+  const now = new Date();
+  const today = businessDate();
+  let from = today;
+  let to = today;
+  if (rangeName === 'week') {
+    const start = new Date(now);
+    start.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+    from = dashboardDateString(start);
+  } else if (rangeName === 'month') {
+    from = dashboardDateString(new Date(now.getFullYear(), now.getMonth(), 1));
+  }
+  document.getElementById('dash-from').value = from;
+  document.getElementById('dash-to').value = to;
+  document.querySelectorAll('.dashboard-range-btn').forEach(button => button.classList.toggle('active', button.dataset.range === rangeName));
+  if (rangeName !== 'custom') loadDashboard();
 }
 
 function renderSalesTrendChart(dailyData) {
@@ -123,13 +163,16 @@ function renderEmployeeSalesChart(employeeData) {
 
 // Ensure the dashboard loads when the view is opened
 document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.dashboard-range-btn').forEach(button => {
+    button.addEventListener('click', () => setDashboardRange(button.dataset.range));
+  });
   const navBtns = document.querySelectorAll('.nav-btn');
   navBtns.forEach(btn => {
     btn.addEventListener('click', async () => {
       if (btn.dataset.view === 'dashboard') {
         const today = businessDate();
-        document.getElementById('dash-from').value = today;
-        document.getElementById('dash-to').value = today;
+        if (!document.getElementById('dash-from').value) document.getElementById('dash-from').value = today;
+        if (!document.getElementById('dash-to').value) document.getElementById('dash-to').value = today;
         
         // Load employee filter options
         const empSelect = document.getElementById('dash-employee-filter');
