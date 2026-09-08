@@ -27,6 +27,7 @@ router.put('/:id', requirePermission('menu'), (req, res) => {
   const { name, name_en, icon, sort_order, active, attributes } = req.body;
   if (name !== undefined && !String(name).trim()) return res.status(400).json({ error: 'Category name is required' });
   const attrStr = attributes !== undefined ? (typeof attributes === 'object' ? JSON.stringify(attributes) : attributes) : null;
+  const before = db.prepare('SELECT id,name,name_en,icon,sort_order,active FROM categories WHERE id=?').get(req.params.id);
   db.prepare(`
     UPDATE categories 
     SET name=COALESCE(?, name), 
@@ -40,13 +41,15 @@ router.put('/:id', requirePermission('menu'), (req, res) => {
   
   const category = db.prepare('SELECT * FROM categories WHERE id=?').get(req.params.id);
   if (!category) return res.status(404).json({ error: 'Category not found' });
-  logAudit(req.currentUser.id, req.currentUser.name, 'update', 'category', req.params.id, `Updated: ${name || req.params.id}`);
+  logAudit(req.currentUser.id, req.currentUser.name, 'update', 'category', req.params.id, `Updated: ${name || req.params.id}`, before, category);
   res.json(category);
 });
 
 router.delete('/:id', requirePermission('menu'), (req, res) => {
+  const before = db.prepare('SELECT id,name,name_en,icon,sort_order,active FROM categories WHERE id=?').get(req.params.id);
   db.prepare('UPDATE categories SET active=0 WHERE id=?').run(req.params.id);
-  logAudit(req.headers['x-employee-id'], req.headers['x-employee-name'], 'delete', 'category', req.params.id, `Deactivated category #${req.params.id}`);
+  const after = db.prepare('SELECT id,name,name_en,icon,sort_order,active FROM categories WHERE id=?').get(req.params.id);
+  logAudit(req.currentUser.id, req.currentUser.name, 'delete', 'category', req.params.id, `Deactivated category #${req.params.id}`, before, after);
   res.json({ ok: true });
 });
 

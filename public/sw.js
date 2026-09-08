@@ -1,4 +1,4 @@
-const CACHE_NAME='nokta-static-v75';
+const CACHE_NAME='nokta-static-v76';
 const STATIC_ASSETS=['/','/index.html','/kds.html','/style.css','/i18n.js','/manifest.json','/nokta-pos-icon.png','/vendor/chart.umd.min.js','/socket.io/socket.io.js','/js/safety.js','/js/app.js','/js/orders.js','/js/menu.js','/js/tables.js','/js/admin.js','/js/inventory.js','/js/dashboard.js','/js/employees.js','/js/settings.js','/js/invoices.js','/js/daily-closing.js','/js/sales.js','/js/audit.js','/js/reports.js','/js/kds.js'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(STATIC_ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE_NAME&&(k.startsWith('pos-')||k.startsWith('nokta-static-'))).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));

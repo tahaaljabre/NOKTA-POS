@@ -14,6 +14,7 @@ router.get('/', (req, res) => {
 
 router.put('/', requirePermission('settings'), (req, res) => {
   const body=req.body||{};
+  const before = Object.fromEntries(db.prepare('SELECT key,value FROM settings').all().map(row => [row.key, row.value]));
   if('setup_complete' in body) return res.status(400).json({error:'إعداد داخلي محمي / Protected internal setting'});
   if(body.tax_rate!==undefined && (!Number.isFinite(Number(body.tax_rate)) || Number(body.tax_rate)<0 || Number(body.tax_rate)>100))return res.status(400).json({error:'الضريبة من 0 إلى 100 / Tax must be 0 to 100'});
   if(body.business_timezone!==undefined){try{new Intl.DateTimeFormat('en',{timeZone:body.business_timezone}).format(new Date());}catch{return res.status(400).json({error:'منطقة زمنية غير صالحة / Invalid time zone'});}}
@@ -23,7 +24,8 @@ router.put('/', requirePermission('settings'), (req, res) => {
   db.transaction(()=>Object.entries(req.body).forEach(([k, v]) => {
     stmt.run(k, String(v));
   }))();
-  logAudit(req.headers['x-employee-id'], req.headers['x-employee-name'], 'update', 'settings', 0, 'Settings updated');
+  const after = Object.fromEntries(db.prepare('SELECT key,value FROM settings').all().map(row => [row.key, row.value]));
+  logAudit(req.currentUser.id, req.currentUser.name, 'update', 'settings', 0, 'Settings updated', before, after);
   res.json({ ok: true });
 });
 

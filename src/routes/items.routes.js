@@ -38,7 +38,8 @@ router.post('/', requirePermission('menu'), (req, res) => {
   `).run(
     String(name).trim(), name_en || '', category_id, roundedPrice, roundedPrice2, cost_price || 0, image || '', barcode || '', sku || '', sort_order || 0, has_modifiers || 0, attrStr
   );
-  logAudit(req.headers['x-employee-id'], req.headers['x-employee-name'], 'create', 'item', info.lastInsertRowid, `Created: ${name}`);
+  const created = db.prepare('SELECT id,name,name_en,category_id,price,price2,active,sort_order FROM items WHERE id=?').get(info.lastInsertRowid);
+  logAudit(req.currentUser.id, req.currentUser.name, 'create', 'item', info.lastInsertRowid, `Created: ${name}`, '', created);
   res.json({ id: info.lastInsertRowid });
 });
 
@@ -52,6 +53,8 @@ router.put('/:id', requirePermission('menu'), (req, res) => {
   const roundedPrice = cleanPrice === null ? null : Math.round(cleanPrice * 100) / 100;
   const roundedPrice2 = cleanPrice2 === null ? null : Math.round(cleanPrice2 * 100) / 100;
   const attrStr = attributes !== undefined ? (typeof attributes === 'object' ? JSON.stringify(attributes) : attributes) : null;
+  const before = db.prepare('SELECT id,name,name_en,category_id,price,price2,active,sort_order FROM items WHERE id=?').get(req.params.id);
+  if (!before) return res.status(404).json({ error: 'Item not found' });
   db.prepare(`
     UPDATE items 
     SET name=COALESCE(?, name),
@@ -70,13 +73,16 @@ router.put('/:id', requirePermission('menu'), (req, res) => {
     WHERE id=?
   `).run(name, name_en, category_id, roundedPrice, roundedPrice2, cost_price, image, barcode, sku, sort_order, active, has_modifiers, attrStr, req.params.id);
   
-  logAudit(req.headers['x-employee-id'], req.headers['x-employee-name'], 'update', 'item', req.params.id, `Updated: ${name || req.params.id}`);
+  const after = db.prepare('SELECT id,name,name_en,category_id,price,price2,active,sort_order FROM items WHERE id=?').get(req.params.id);
+  logAudit(req.currentUser.id, req.currentUser.name, 'update', 'item', req.params.id, `Updated: ${name || req.params.id}`, before, after);
   res.json({ ok: true });
 });
 
 router.delete('/:id', requirePermission('menu'), (req, res) => {
+  const before = db.prepare('SELECT id,name,name_en,category_id,price,price2,active,sort_order FROM items WHERE id=?').get(req.params.id);
   db.prepare('UPDATE items SET active=0 WHERE id=?').run(req.params.id);
-  logAudit(req.headers['x-employee-id'], req.headers['x-employee-name'], 'delete', 'item', req.params.id, `Deactivated item #${req.params.id}`);
+  const after = db.prepare('SELECT id,name,name_en,category_id,price,price2,active,sort_order FROM items WHERE id=?').get(req.params.id);
+  logAudit(req.currentUser.id, req.currentUser.name, 'delete', 'item', req.params.id, `Deactivated item #${req.params.id}`, before, after);
   res.json({ ok: true });
 });
 

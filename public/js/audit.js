@@ -62,9 +62,7 @@ function formatAuditValue(raw) {
   if (!raw || raw === '""' || raw === "''" || raw === '{}') return '<span class="audit-empty">-</span>';
   try {
     const data = JSON.parse(raw);
-    if (data.summary) {
-      return `<div class="audit-summary-tag">${escapeHtml(data.summary)}</div>`;
-    }
+    if (data.summary) return `<div class="audit-summary-tag">${escapeHtml(data.summary)}</div>`;
     if (data.order) {
       const o = data.order;
       return `
@@ -76,7 +74,9 @@ function formatAuditValue(raw) {
         </div>
       `;
     }
-    return `<div class="audit-json-brief">${escapeHtml(JSON.stringify(data).slice(0, 80))}</div>`;
+    const labels = { name: 'الاسم', name_en: 'الاسم EN', price: 'السعر', price2: 'السعر 2', active: 'الحالة', sort_order: 'الترتيب', role: 'الدور', username: 'المستخدم', status: 'الحالة', total: 'الإجمالي', discount_percent: 'الخصم', payment_method: 'الدفع', category_id: 'القسم' };
+    const fields = Object.entries(data).filter(([key, value]) => value !== null && value !== undefined && key !== 'permissions' && key !== 'attributes').slice(0, 10);
+    return `<div class="audit-json-brief">${fields.map(([key, value]) => `<div><strong>${escapeHtml(labels[key] || key)}:</strong> ${escapeHtml(String(value))}</div>`).join('') || escapeHtml(JSON.stringify(data).slice(0, 160))}</div>`;
   } catch (e) {
     return `<span class="audit-text-val">${escapeHtml(raw)}</span>`;
   }

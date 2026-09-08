@@ -60,6 +60,8 @@ router.post('/', requireAdmin, (req, res) => {
 
 router.put('/:id', requireAdmin, (req, res) => {
   const { name, name_en, pin, username, password, role, permissions, phone, default_floor, default_station, active } = req.body;
+  const before = db.prepare('SELECT id,name,name_en,username,role,permissions,phone,default_floor,default_station,active FROM employees WHERE id=?').get(req.params.id);
+  if (!before) return res.status(404).json({ error: 'Employee not found' });
   const floorVal = default_floor !== undefined ? parseInt(default_floor) : undefined;
   const cleanUsername = username === undefined ? undefined : (username ? String(username).trim().toLowerCase() : null);
   if (cleanUsername && !/^[a-z0-9._-]{3,32}$/.test(cleanUsername)) return res.status(400).json({ error: 'Invalid username' });
@@ -98,7 +100,8 @@ router.put('/:id', requireAdmin, (req, res) => {
   }
 
   require('../socket/socket.handler').revokeUser(req.params.id);
-  logAudit(req.currentUser.id, req.currentUser.name, 'update', 'employee', req.params.id, `Updated Employee: ${name || req.params.id}`);
+  const after = db.prepare('SELECT id,name,name_en,username,role,permissions,phone,default_floor,default_station,active FROM employees WHERE id=?').get(req.params.id);
+  logAudit(req.currentUser.id, req.currentUser.name, 'update', 'employee', req.params.id, `Updated Employee: ${name || req.params.id}`, before, after);
   res.json({ ok: true });
 });
 
