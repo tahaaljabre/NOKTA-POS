@@ -140,6 +140,13 @@ async function attemptLogin() {
       socket.auth = { token: data.token };
       socket.connect();
       await cacheData('employees', [data]);
+
+      const p = typeof data.permissions === 'string' ? JSON.parse(data.permissions) : (data.permissions || {});
+      if (data.role === 'kitchen' || (p.kitchen && !p.pos && data.role !== 'admin')) {
+        window.location.href = `kds.html#session=${encodeURIComponent(data.token)}`;
+        return;
+      }
+
       document.getElementById('login-screen').classList.add('hidden');
       document.getElementById('app').classList.remove('hidden');
       
@@ -196,6 +203,13 @@ async function attemptPasswordLogin(username, password) {
     currentUserMaxDiscount = typeof data.max_discount === 'number' ? data.max_discount : 100;
     localStorage.setItem('pos_kitchen_token', data.token || '');
     socket.auth = { token: data.token }; socket.connect();
+
+    const p = typeof data.permissions === 'string' ? JSON.parse(data.permissions) : (data.permissions || {});
+    if (data.role === 'kitchen' || (p.kitchen && !p.pos && data.role !== 'admin')) {
+      window.location.href = `kds.html#session=${encodeURIComponent(data.token)}`;
+      return;
+    }
+
     document.getElementById('login-screen').classList.add('hidden');
     document.getElementById('app').classList.remove('hidden');
     updateHeaderUser();

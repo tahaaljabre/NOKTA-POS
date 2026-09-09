@@ -1,5 +1,5 @@
 {
-  "date": "2026-09-09T14:23:00.295Z",
+  "date": "2026-09-09T16:04:00.067Z",
   "results": [
     {
       "file": "01-sql.cjs",
@@ -93,8 +93,8 @@
     },
     {
       "file": "19-tls.cjs",
-      "passed": true,
-      "output": "\n========================================\n  🍽️ POS Server: https://127.0.0.1:61589\n  🔐 Initial setup: create the administrator account in the browser\n  📱 Responsive Multi-device Architecture\n========================================\n\nPASS 19: actual HTTPS server, verified test CA and API response\n"
+      "passed": false,
+      "output": "\n========================================\n  🍽️ POS Server: https://127.0.0.1:62411\n  🔐 Initial setup: create the administrator account in the browser\n  📱 Responsive Multi-device Architecture\n========================================\n\nError: certificate has expired\n    at TLSSocket.onConnectSecure (node:internal/tls/wrap:1767:34)\n    at TLSSocket.emit (node:events:514:20)\n    at TLSSocket._finishInit (node:internal/tls/wrap:1202:8)\n    at ssl.onhandshakedone (node:internal/tls/wrap:983:12) {\n  code: 'CERT_HAS_EXPIRED'\n}\n"
     },
     {
       "file": "20-translations.cjs",
