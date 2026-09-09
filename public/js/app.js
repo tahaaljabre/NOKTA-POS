@@ -402,6 +402,7 @@ async function attemptLogin() {
       const stationSel = document.getElementById('pos-station-select');
       if (stationSel) stationSel.value = autoStation;
 
+      currentUserMaxDiscount = typeof data.max_discount === 'number' ? data.max_discount : 100;
       toast(currentLang === 'ar' ? `مرحباً ${escapeHtml(data.name)} (${roleText} - ${floorText})` : `Welcome ${escapeHtml(data.name)} (${roleText} - ${floorText})`, 'success');
 
       loginError.textContent = '';
@@ -431,6 +432,7 @@ async function attemptPasswordLogin(username, password) {
     const data = await res.json();
     if (!res.ok || !data.id) throw new Error(data.error || t('login_error'));
     currentUser = data;
+    currentUserMaxDiscount = typeof data.max_discount === 'number' ? data.max_discount : 100;
     localStorage.setItem('pos_kitchen_token', data.token || '');
     socket.auth = { token: data.token }; socket.connect();
     document.getElementById('login-screen').classList.add('hidden');
@@ -450,6 +452,7 @@ function initApp() {
   setupAdmin();
   applyTranslations();
   checkPermissions();
+  applyDiscountPermissions();
   if (typeof switchMobilePosTab === 'function') {
     switchMobilePosTab('menu');
   }
