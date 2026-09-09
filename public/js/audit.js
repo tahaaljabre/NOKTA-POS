@@ -77,27 +77,76 @@ function renderInvoiceCard(snap, label, colorClass) {
   `;
 }
 
-function renderAuditChangeSummary(oldSnap, newSnap) {
-  if (!oldSnap || !newSnap) return '';
+function renderAuditChangeSummary(oldSnap, newSnap, action) {
   const isAr = currentLang === 'ar';
+  const curr = getCurrency();
   const changes = [];
+
+  // حالة الحذف
+  if (action === 'delete_order') {
+    if (oldSnap) {
+      changes.push(`<span class="audit-change-chip audit-chip-delete">🗑️ ${isAr ? 'تم حذف الفاتورة #' : 'Invoice #'}${oldSnap.invoice_number||''} &mdash; ${isAr ? 'إجمالي' : 'Total'}: <strong>${(oldSnap.total||0).toFixed(2)} ${curr}</strong></span>`);
+    }
+    return `<div class="audit-changes-summary">${changes.join('')}</div>`;
+  }
+
+  // حالة الإلغاء
+  if (action === 'cancel_order') {
+    changes.push(`<span class="audit-change-chip audit-chip-delete">❌ ${isAr ? 'تم إلغاء الفاتورة' : 'Invoice cancelled'}</span>`);
+    return `<div class="audit-changes-summary">${changes.join('')}</div>`;
+  }
+
+  if (!oldSnap || !newSnap) return '';
+
+  // تغيير الحالة
   if (oldSnap.status !== newSnap.status) {
     const statusMap = { active: isAr ? 'نشط' : 'Active', completed: isAr ? 'مكتمل' : 'Completed', cancelled: isAr ? 'ملغي' : 'Cancelled' };
     changes.push(`${isAr ? 'الحالة' : 'Status'}: <del>${escapeHtml(statusMap[oldSnap.status]||oldSnap.status)}</del> → <strong>${escapeHtml(statusMap[newSnap.status]||newSnap.status)}</strong>`);
   }
-  if ((oldSnap.discount_percent||0) !== (newSnap.discount_percent||0)) {
-    changes.push(`${isAr ? 'الخصم' : 'Discount'}: <del>${oldSnap.discount_percent||0}%</del> → <strong style="color:#7c3aed">${newSnap.discount_percent||0}%</strong>`);
+
+  // تغيير الخصم
+  const oldDisc = oldSnap.discount_percent || 0;
+  const newDisc = newSnap.discount_percent || 0;
+  if (oldDisc !== newDisc) {
+    changes.push(`🏷️ ${isAr ? 'خصم' : 'Discount'}: <del>${oldDisc}%</del> → <strong style="color:#7c3aed">${newDisc}%</strong>`);
   }
-  if ((oldSnap.total||0) !== (newSnap.total||0)) {
-    const curr = getCurrency();
-    changes.push(`${isAr ? 'الإجمالي' : 'Total'}: <del>${(oldSnap.total||0).toFixed(2)}</del> → <strong style="color:#059669">${(newSnap.total||0).toFixed(2)} ${curr}</strong>`);
+
+  // تغيير الإجمالي
+  const oldTotal = oldSnap.total || 0;
+  const newTotal = newSnap.total || 0;
+  if (Math.abs(oldTotal - newTotal) > 0.001) {
+    const diff = newTotal - oldTotal;
+    const sign = diff > 0 ? '+' : '';
+    const color = diff > 0 ? '#dc2626' : '#059669';
+    changes.push(`💰 ${isAr ? 'الإجمالي' : 'Total'}: <del>${oldTotal.toFixed(2)}</del> → <strong style="color:${color}">${newTotal.toFixed(2)} ${curr}</strong> <em style="color:${color};font-size:11px;">(${sign}${diff.toFixed(2)})</em>`);
   }
-  const oldItems = Array.isArray(oldSnap.items) ? oldSnap.items.length : 0;
-  const newItems = Array.isArray(newSnap.items) ? newSnap.items.length : 0;
-  if (oldItems !== newItems) {
-    changes.push(`${isAr ? 'عدد الأصناف' : 'Items'}: <del>${oldItems}</del> → <strong>${newItems}</strong>`);
+
+  // تغيير الأصناف
+  const oldItems = Array.isArray(oldSnap.items) ? oldSnap.items : [];
+  const newItems = Array.isArray(newSnap.items) ? newSnap.items : [];
+  if (oldItems.length !== newItems.length) {
+    changes.push(`🍽️ ${isAr ? 'عدد الأصناف' : 'Items'}: <del>${oldItems.length}</del> → <strong>${newItems.length}</strong>`);
+  } else {
+    // فحص تغيير الكميات
+    const qtyChanges = [];
+    newItems.forEach(ni => {
+      const oi = oldItems.find(o => o.item_id === ni.item_id);
+      if (oi && oi.quantity !== ni.quantity) {
+        const name = currentLang === 'ar' ? (ni.item_name || ni.name || '') : (ni.item_name_en || ni.name_en || ni.item_name || '');
+        qtyChanges.push(`${escapeHtml(name)}: <del>${oi.quantity}</del>→<strong>${ni.quantity}</strong>`);
+      }
+    });
+    if (qtyChanges.length) changes.push(`📊 ${isAr ? 'كميات' : 'Qty'}: ${qtyChanges.join(' | ')}`);
   }
-  if (!changes.length) return '';
+
+  // تغيير طريقة الدفع
+  if (oldSnap.payment_method && newSnap.payment_method && oldSnap.payment_method !== newSnap.payment_method) {
+    changes.push(`💳 ${isAr ? 'طريقة الدفع' : 'Payment'}: <del>${escapeHtml(oldSnap.payment_method)}</del> → <strong>${escapeHtml(newSnap.payment_method)}</strong>`);
+  }
+
+  if (!changes.length) {
+    return `<div class="audit-changes-summary"><span class="audit-change-chip" style="color:var(--text-muted);">${isAr ? 'لا تغييرات ظاهرة' : 'No visible changes'}</span></div>`;
+  }
   return `<div class="audit-changes-summary">${changes.map(c=>`<span class="audit-change-chip">${c}</span>`).join('')}</div>`;
 }
 
@@ -135,8 +184,9 @@ async function loadAuditAdmin() {
     const isOrderAction = ['create_order','update_order','delete_order','cancel_order','complete_order'].includes(l.action);
     const oldSnap = parseOrderSnapshot(l.old_value);
     const newSnap = parseOrderSnapshot(l.new_value);
-    const hasSnapshots = isOrderAction && (oldSnap || newSnap);
-    const changeSummary = (isOrderAction && oldSnap && newSnap) ? renderAuditChangeSummary(oldSnap, newSnap) : '';
+    // عرض اللقطات: للحذف نعرض فقط القديمة، للتعديل نعرض الاثنتين
+    const hasSnapshots = isOrderAction && (oldSnap || (newSnap && Object.keys(newSnap).length > 0));
+    const changeSummary = isOrderAction ? renderAuditChangeSummary(oldSnap, newSnap, l.action) : '';
     const dateStr = parsePOSDate(l.created_at).toLocaleString(isAr ? 'ar-SA' : 'en-US', { dateStyle:'short', timeStyle:'short' });
 
     // Build what changed label
@@ -171,8 +221,18 @@ async function loadAuditAdmin() {
         </div>
       </div>
       ${changeSummary}
-      ${hasSnapshots ? `
-        <div class="audit-snapshots">
+      ${hasSnapshots ? (() => {
+        const isDelete = l.action === 'delete_order';
+        if (isDelete) {
+          // للحذف: نعرض فقط الفاتورة القديمة في عرض كامل العرض
+          return `<div class="audit-snapshots audit-snapshots-single">
+            <div class="audit-snap-col" style="grid-column:1/-1;">
+              <div class="audit-snap-title audit-snap-before">${isAr ? '⬅️ الفاتورة المحذوفة' : '⬅️ Deleted Invoice'}</div>
+              ${renderInvoiceCard(oldSnap, isAr ? 'قبل الحذف' : 'Before Deletion', 'audit-inv-old')}
+            </div>
+          </div>`;
+        }
+        return `<div class="audit-snapshots">
           <div class="audit-snap-col">
             <div class="audit-snap-title audit-snap-before">${isAr ? '⬅️ قبل التعديل' : '⬅️ Before'}</div>
             ${renderInvoiceCard(oldSnap, isAr ? 'الفاتورة القديمة' : 'Old Invoice', 'audit-inv-old')}
@@ -182,8 +242,8 @@ async function loadAuditAdmin() {
             <div class="audit-snap-title audit-snap-after">${isAr ? '✅ بعد التعديل' : '✅ After'}</div>
             ${renderInvoiceCard(newSnap, isAr ? 'الفاتورة الجديدة' : 'New Invoice', 'audit-inv-new')}
           </div>
-        </div>
-      ` : (l.details && !isOrderAction ? `<div class="audit-card-detail">${escapeHtml(l.details)}</div>` : '')}
+        </div>`;
+      })() : (l.details && !isOrderAction ? `<div class="audit-card-detail">${escapeHtml(l.details)}</div>` : '')}
     </div>`;
   }).join('');
 }

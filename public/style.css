@@ -210,6 +210,14 @@
   margin-top: 4px;
   padding-top: 4px;
 }
+.audit-chip-delete {
+  background: #fef2f2 !important;
+  border-color: #fecaca !important;
+  color: #dc2626 !important;
+}
+.audit-snapshots-single {
+  grid-template-columns: 1fr !important;
+}
 @media (max-width: 640px) {
   .audit-snapshots { grid-template-columns: 1fr; }
   .audit-snap-divider { display: none; }
