@@ -1,0 +1,15 @@
+<!-- Invoices View -->
+    <div id="view-invoices" class="view">
+      <div class="view-content-wrapper">
+        <div class="admin-toolbar">
+          <input type="date" id="invoice-date-filter">
+          <select id="invoice-employee-filter">
+            <option value="" data-i18n="all_employees">كل الموظفين</option>
+          </select>
+          <input type="number" id="invoice-search" data-i18n-placeholder="invoice_number_ph" placeholder="رقم الفاتورة"
+            style="width:140px;">
+          <button class="btn" onclick="loadInvoices()" data-i18n="load">عرض</button>
+        </div>
+        <div id="invoices-list" class="invoices-scroll-area"></div>
+      </div>
+    </div>

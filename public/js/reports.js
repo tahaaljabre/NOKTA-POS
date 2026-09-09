@@ -94,6 +94,37 @@ function printAdminReport() {
   }
 }
 
+async function exportAdminReportExcel() {
+  const from = document.getElementById('report-from')?.value || businessDate();
+  const to = document.getElementById('report-to')?.value || from;
+  const employeeId = document.getElementById('report-employee-filter')?.value || '';
+  await downloadSalesReportExcel(from, to, employeeId);
+}
+
+async function downloadSalesReportExcel(from, to, employeeId = '') {
+  try {
+    toast(t('excel_exporting'), 'info');
+    const query = new URLSearchParams({ from, to });
+    if (employeeId) query.set('employee_id', employeeId);
+    const response = await fetch(`${API_BASE}/api/reports/sales.xlsx?${query}`, {
+      headers: { Authorization: `Bearer ${currentUser?.token || ''}`, 'Accept-Language': currentLang },
+      cache: 'no-store'
+    });
+    if (!response.ok) throw new Error(`Excel export failed (${response.status})`);
+    const blob = await response.blob();
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `nokta-sales-${from}-to-${to}.xlsx`;
+    document.body.appendChild(link);
+    link.click();
+    URL.revokeObjectURL(link.href);
+    link.remove();
+    toast(t('excel_export_success'), 'success');
+  } catch (error) {
+    toast(t('excel_export_failed'), 'error');
+  }
+}
+
 // Backward compatibility alias
 async function loadDailyReport() {
   loadAdminReport();

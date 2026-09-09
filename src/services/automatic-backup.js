@@ -7,12 +7,18 @@ function safeSqlString(value) {
   return `'${String(value).replace(/'/g, "''")}'`;
 }
 
-function createAutomaticBackup(rawDb, backupDir, now = new Date()) {
+function createDatabaseBackup(rawDb, backupDir, options = {}) {
   fs.mkdirSync(backupDir, { recursive: true });
+  const now = options.now || new Date();
+  const prefix = options.prefix || PREFIX;
   const stamp = now.toISOString().replace(/[:.]/g, '-');
-  const destination = path.join(backupDir, `${PREFIX}${stamp}.sqlite`);
+  const destination = path.join(backupDir, `${prefix}${stamp}.sqlite`);
   rawDb.exec(`VACUUM INTO ${safeSqlString(destination)}`);
   return destination;
+}
+
+function createAutomaticBackup(rawDb, backupDir, now = new Date()) {
+  return createDatabaseBackup(rawDb, backupDir, { now, prefix: PREFIX });
 }
 
 function removeExpiredBackups(backupDir, retentionDays = 30, now = new Date()) {
@@ -37,7 +43,6 @@ function startAutomaticBackups(rawDb, dataDir, options = {}) {
     try {
       createAutomaticBackup(rawDb, backupDir);
       removeExpiredBackups(backupDir, options.retentionDays || 30);
-      console.log(`Automatic database backup completed: ${backupDir}`);
     } catch (error) {
       console.error('Automatic database backup failed:', error.message);
     }
@@ -48,4 +53,4 @@ function startAutomaticBackups(rawDb, dataDir, options = {}) {
   return { stop: () => clearInterval(timer), backupDir };
 }
 
-module.exports = { createAutomaticBackup, removeExpiredBackups, startAutomaticBackups };
+module.exports = { createDatabaseBackup, createAutomaticBackup, removeExpiredBackups, startAutomaticBackups };

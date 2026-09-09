@@ -1,0 +1,64 @@
+<div id="admin-menu-admin" class="admin-panel active">
+            <div class="menu-admin-header-row">
+              <h2 data-i18n="admin_menu" style="margin:0;">إدارة وتعديل المنيو</h2>
+              <div class="admin-toolbar" style="margin-bottom:0;">
+                <button class="btn" id="btn-add-category" data-i18n="add_category">📁 + قسم جديد</button>
+                <button class="btn btn-save" id="btn-add-item" data-i18n="add_item">🍽️ + صنف جديد</button>
+              </div>
+            </div>
+
+            <!-- Categories Management Table -->
+            <div id="categories-admin-section">
+              <h3 style="margin:12px 0 8px;font-size:14px;">📋 إدارة الأقسام</h3>
+              <div class="admin-table-wrapper">
+                <table class="admin-table" id="categories-admin-table">
+                  <thead>
+                    <tr>
+                      <th style="width:50px;">الأيقونة</th>
+                      <th>الاسم (عربي)</th>
+                      <th>الاسم (إنجليزي)</th>
+                      <th style="width:60px;">الترتيب</th>
+                      <th style="width:60px;">الأصناف</th>
+                      <th style="width:140px;">إجراءات</th>
+                    </tr>
+                  </thead>
+                  <tbody id="categories-admin-tbody"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Category Tabs Filter for Easy Navigation -->
+            <div class="menu-admin-cat-filter" id="menu-admin-cat-filter">
+              <!-- Dynamic Category Pills -->
+            </div>
+
+            <!-- Search & Controls Bar -->
+            <div class="menu-admin-controls-bar">
+              <div class="menu-admin-search-wrap">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="menu-admin-search" placeholder="ابحث عن صنف بالاسم أو السعر..."
+                  oninput="filterMenuAdminTable()">
+                <button type="button" class="search-clear-btn" id="menu-admin-search-clear"
+                  onclick="clearMenuAdminSearch()" style="display:none;">✕</button>
+              </div>
+              <div class="menu-admin-stats-badge" id="menu-admin-stats-badge">
+                عدد الأصناف: <strong id="menu-admin-item-count">0</strong>
+              </div>
+            </div>
+
+            <div class="admin-table-wrapper">
+              <table class="admin-table" id="menu-admin-table">
+                <thead>
+                  <tr>
+                    <th style="width:70px;">الصورة</th>
+                    <th data-i18n="th_name">اسم الصنف</th>
+                    <th data-i18n="th_category">القسم</th>
+                    <th data-i18n="th_price" style="width:140px;">السعر (تعديل سريع)</th>
+                    <th data-i18n="th_status" style="width:100px;">الحالة</th>
+                    <th data-i18n="th_actions" style="width:160px;">إجراءات</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>

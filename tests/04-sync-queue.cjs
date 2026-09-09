@@ -4,7 +4,7 @@ const vm=require('vm'),fs=require('fs');const {start}=require('./support.cjs');
  async function scenario(ok,data) {
   const deleted=[],el={className:'',textContent:''};
   const context=vm.createContext({currentUser:{id:1,token:'test'},currentLang:'en',getOfflineOrders:async()=>[{offline_id:'a',local_id:1,employee_id:1},{offline_id:'b',local_id:2,employee_id:1}],clearOfflineOrders:async ids=>deleted.push(...ids),getDeviceId:()=> 'test',api:async()=>{if(!ok)throw new Error('401');return data;},document:{getElementById:()=>el},toast(){},loadTables(){},loadActiveOrders(){}});
-  const source=fs.readFileSync('public/js/app.js','utf8');vm.runInContext(source.slice(source.indexOf('let syncInProgress=false;')),context);
+  const source=fs.readFileSync('public/js/core/realtime-sync.js','utf8');vm.runInContext(source.slice(source.indexOf('let syncInProgress=false;')),context);
   await vm.runInContext('syncPendingOrders()',context);return deleted;
  }
  assert.deepEqual(await scenario(false,{error:'expired'}),[]);

@@ -3,7 +3,7 @@ const router = express.Router();
 const { db } = require('../database/db');
 const { logAudit } = require('../middleware/audit.middleware');
 const { emitEvent } = require('../socket/socket.handler');
-const { checkPerm, requirePermission } = require('../middleware/auth.middleware');
+const { requirePermission } = require('../middleware/auth.middleware');
 router.use(require('../middleware/auth.middleware').requireAuthenticated);
 const {can,error}=require('../services/orders.service');
 

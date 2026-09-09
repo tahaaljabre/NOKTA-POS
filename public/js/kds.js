@@ -77,13 +77,12 @@ function playNotification() {
       oscillator.start();
       oscillator.stop(audioContext.currentTime + 0.35);
     }
-  } catch (e) { console.warn('Kitchen beep failed', e); }
+  } catch (e) { /* Kitchen beep failed */ }
   const audio = document.getElementById('notification-sound');
   if (audio) {
     const playPromise = audio.play();
     if (playPromise !== undefined) {
       playPromise.catch(e => {
-        console.log('Audio play prevented by browser', e);
         const btn = document.getElementById('btn-enable-sound');
         if (btn) {
           btn.style.display = 'block';

@@ -14,14 +14,27 @@ router.get('/', (req, res) => {
 
 router.put('/', requirePermission('settings'), (req, res) => {
   const body=req.body||{};
+  if (!body || typeof body !== 'object' || Array.isArray(body)) return res.status(400).json({error:'بيانات غير صالحة / Invalid request body'});
   const before = Object.fromEntries(db.prepare('SELECT key,value FROM settings').all().map(row => [row.key, row.value]));
   if('setup_complete' in body) return res.status(400).json({error:'إعداد داخلي محمي / Protected internal setting'});
   if(body.tax_rate!==undefined && (!Number.isFinite(Number(body.tax_rate)) || Number(body.tax_rate)<0 || Number(body.tax_rate)>100))return res.status(400).json({error:'الضريبة من 0 إلى 100 / Tax must be 0 to 100'});
   if(body.business_timezone!==undefined){try{new Intl.DateTimeFormat('en',{timeZone:body.business_timezone}).format(new Date());}catch{return res.status(400).json({error:'منطقة زمنية غير صالحة / Invalid time zone'});}}
   if(body.next_invoice_number!==undefined && (!Number.isSafeInteger(Number(body.next_invoice_number)) || Number(body.next_invoice_number)<=db.prepare('SELECT COALESCE(MAX(invoice_number),0) n FROM orders').get().n))return res.status(400).json({error:'العداد يجب أن يتجاوز آخر فاتورة / Counter must exceed the last invoice'});
   for(const key of ['payment_methods_list','delivery_methods_list'])if(body[key]!==undefined){try{const list=JSON.parse(body[key]);if(!Array.isArray(list)||!list.length||list.some(m=>!m||!/^[a-z0-9_]{1,40}$/.test(m.id)||typeof m.name!=='string')||new Set(list.map(m=>m.id)).size!==list.length)throw 0;}catch{return res.status(400).json({error:'قائمة طرق غير صالحة / Invalid methods list'});}}
+  const ALLOWED_SETTINGS = new Set([
+    'tax_rate','currency','currency_symbol','business_name','business_name_en',
+    'business_timezone','receipt_header','receipt_footer','receipt_header_en','receipt_footer_en',
+    'payment_methods_list','delivery_methods_list','default_payment_method',
+    'printer_ip','printer_port','thermal_printer_enabled','kitchen_printer_enabled',
+    'table_mode','order_mode','language'
+  ]);
+  const filteredBody = {};
+  for (const [k, v] of Object.entries(body)) {
+    if (ALLOWED_SETTINGS.has(k)) filteredBody[k] = v;
+  }
+  if (!Object.keys(filteredBody).length) return res.status(400).json({error:'مفاتيح الإعدادات غير صالحة / Invalid settings keys'});
   const stmt = db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)');
-  db.transaction(()=>Object.entries(req.body).forEach(([k, v]) => {
+  db.transaction(()=>Object.entries(filteredBody).forEach(([k, v]) => {
     stmt.run(k, String(v));
   }))();
   const after = Object.fromEntries(db.prepare('SELECT key,value FROM settings').all().map(row => [row.key, row.value]));

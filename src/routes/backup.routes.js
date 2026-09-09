@@ -2,6 +2,10 @@ const router = require('express').Router();
 const { db } = require('../database/db');
 const { requireAdmin } = require('../middleware/auth.middleware');
 const { logAudit } = require('../middleware/audit.middleware');
+const config = require('../config/app.config');
+const path = require('path');
+const os = require('os');
+const { createDatabaseBackup } = require('../services/automatic-backup');
 const TABLES = ['employees','categories','items','modifiers','item_modifiers','table_zones','tables','customers','orders','order_items','shifts','inventory','stock_logs','daily_closings','discounts_coupons','audit_log','settings','sync_log'];
 router.use(requireAdmin);
 const fail = message => Object.assign(new Error(message), {status:400});
@@ -15,6 +19,19 @@ router.get('/export', (req,res) => {
   })();
   res.setHeader('Cache-Control','no-store');
   res.json(snapshot);
+});
+router.get('/database', (req, res, next) => {
+  const backupDir = config.dbPath === ':memory:'
+    ? path.join(os.tmpdir(), 'nokta-pos-test-backups')
+    : path.join(config.dbDir, 'backups', 'manual');
+  try {
+    const file = createDatabaseBackup(db.getRawDb(), backupDir, { prefix: 'nokta-pos-full-' });
+    logAudit(req.currentUser.id, req.currentUser.name, 'backup_database', 'backup', 0, 'Created full SQLite database backup');
+    res.setHeader('Cache-Control', 'no-store');
+    res.download(file, path.basename(file));
+  } catch (error) {
+    next(error);
+  }
 });
 router.post('/restore',(req,res) => {
   const data=req.body;

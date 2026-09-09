@@ -45,13 +45,17 @@ router.get('/', (req, res) => {
 router.post('/', requireAdmin, (req, res) => {
   const { name, name_en, pin, username, password, role, permissions, phone, default_floor, default_station, max_discount } = req.body;
   if (!name || !pin) return res.status(400).json({ error: 'Name and PIN required' });
+  if (name.length > 100) return res.status(400).json({ error: 'الاسم طويل جداً / Name too long (max 100 characters)' });
+  if (name_en && name_en.length > 100) return res.status(400).json({ error: 'الاسم الإنجزي طويل جداً / English name too long (max 100 characters)' });
+  if (phone && phone.length > 30) return res.status(400).json({ error: 'الهاتف طويل جداً / Phone too long (max 30 characters)' });
   const cleanUsername = username ? String(username).trim().toLowerCase() : null;
   if (cleanUsername && !/^[a-z0-9._-]{3,32}$/.test(cleanUsername)) return res.status(400).json({ error: 'Invalid username' });
   if (password && (typeof password !== 'string' || password.length < 6)) return res.status(400).json({ error: 'Password must contain at least 6 characters' });
 
   const floorVal = parseInt(default_floor) || 1;
   const stationVal = default_station || (role === 'waiter' ? 'waiter_mobile' : `cashier_floor${floorVal}`);
-  const maxDiscountNew = Math.min(100, Math.max(0, parseFloat(req.body.max_discount) || 100));
+  const parsedMax = parseFloat(max_discount);
+  const maxDiscountNew = Math.min(100, Math.max(0, isNaN(parsedMax) ? 100 : parsedMax));
 
   const info = db.prepare('INSERT INTO employees (name, name_en, pin, username, password_hash, role, permissions, phone, default_floor, default_station, max_discount) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').run(
     name, name_en || '', hashPin(pin), cleanUsername, password ? hashPin(password) : null, role || 'cashier', JSON.stringify(permissions || { pos: true }), phone || '', floorVal, stationVal, maxDiscountNew
@@ -64,6 +68,9 @@ router.put('/:id', requireAdmin, (req, res) => {
   const { name, name_en, pin, username, password, role, permissions, phone, default_floor, default_station, active, max_discount } = req.body;
   const before = db.prepare('SELECT id,name,name_en,username,role,permissions,phone,default_floor,default_station,active,max_discount FROM employees WHERE id=?').get(req.params.id);
   if (!before) return res.status(404).json({ error: 'Employee not found' });
+  if (name !== undefined && name.length > 100) return res.status(400).json({ error: 'الاسم طويل جداً / Name too long (max 100 characters)' });
+  if (name_en !== undefined && name_en.length > 100) return res.status(400).json({ error: 'الاسم الإنجزي طويل جداً / English name too long (max 100 characters)' });
+  if (phone !== undefined && phone.length > 30) return res.status(400).json({ error: 'الهاتف طويل جداً / Phone too long (max 30 characters)' });
   const floorVal = default_floor !== undefined ? parseInt(default_floor) : undefined;
   const cleanUsername = username === undefined ? undefined : (username ? String(username).trim().toLowerCase() : null);
   if (cleanUsername && !/^[a-z0-9._-]{3,32}$/.test(cleanUsername)) return res.status(400).json({ error: 'Invalid username' });

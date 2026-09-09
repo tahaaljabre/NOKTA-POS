@@ -3,7 +3,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { DatabaseSync } = require('node:sqlite');
-const { createAutomaticBackup, removeExpiredBackups } = require('../src/services/automatic-backup');
+const { createDatabaseBackup, createAutomaticBackup, removeExpiredBackups } = require('../src/services/automatic-backup');
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'nokta-backup-'));
 try {
@@ -13,6 +13,14 @@ try {
   const restored = new DatabaseSync(backup, { readOnly: true });
   assert.equal(restored.prepare('SELECT value FROM proof').get().value, 'ok');
   restored.close();
+
+  const closingBackup = createDatabaseBackup(source, path.join(root, 'daily-closing'), {
+    prefix: 'nokta-pos-closing-2026-09-09-'
+  });
+  assert.match(path.basename(closingBackup), /^nokta-pos-closing-2026-09-09-/);
+  const closingCopy = new DatabaseSync(closingBackup, { readOnly: true });
+  assert.equal(closingCopy.prepare('SELECT value FROM proof').get().value, 'ok');
+  closingCopy.close();
   source.close();
 
   const old = new Date('2026-01-01T00:00:00Z');

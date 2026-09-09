@@ -9,7 +9,7 @@ const fs=require('fs');
  const after=(await api('/api/orders/'+saved.id)).data;assert.equal(after.total,saved.total);assert.equal(after.items[0].price,saved.items[0].price);
  assert.equal((await api('/api/orders/'+saved.id+'/ready','POST',{version:saved.version},chef)).status,409);
  assert.equal((await api('/api/orders/'+saved.id,'PUT',{status:'completed'},chef)).status,403);
- const app=fs.readFileSync('public/js/app.js','utf8'),kds=fs.readFileSync('public/js/kds.js','utf8');
+ const app=fs.readFileSync('public/js/core/app-bootstrap.js','utf8'),kds=fs.readFileSync('public/js/kds.js','utf8');
  assert(app.includes("kds.html#session=${encodeURIComponent(currentUser.token)}"));
  assert(kds.includes("history.replaceState(null, '', location.pathname + location.search)"));
  console.log('PASS 16: kitchen-only permission; ready preserves prices and items; stale updates rejected');

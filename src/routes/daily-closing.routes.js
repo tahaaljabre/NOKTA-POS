@@ -4,6 +4,9 @@ const { db } = require('../database/db');
 const { logAudit } = require('../middleware/audit.middleware');
 const { getRequesterInfo, requirePermission } = require('../middleware/auth.middleware');
 const { requireAuthenticated } = require('../middleware/auth.middleware');
+const config = require('../config/app.config');
+const path = require('path');
+const { createDatabaseBackup } = require('../services/automatic-backup');
 router.use(requireAuthenticated);
 const {dayOf,range,validDay}=require('../services/business-time');
 
@@ -145,6 +148,21 @@ router.post('/close', (req, res) => {
     }
 
     logAudit(requester.id, requester.name, 'daily_closing_all', 'daily_closing', 0, `Grand Daily closing for ${d}: ${grandTotalOrders} orders, ${grandTotalRevenue.toFixed(2)}`);
+    let backupFile = null;
+    let backupError = null;
+    if (config.dbPath !== ':memory:') {
+      try {
+        backupFile = createDatabaseBackup(
+          db.getRawDb(),
+          path.join(config.dbDir, 'backups', 'daily-closing'),
+          { prefix: `nokta-pos-closing-${d}-` }
+        );
+        logAudit(requester.id, requester.name, 'backup_daily_closing', 'backup', 0, `Created full database backup after grand closing for ${d}`);
+      } catch (error) {
+        backupError = error.message;
+        console.error('Daily closing backup failed:', error);
+      }
+    }
     return res.json({
       ok: true,
       is_grand: true,
@@ -154,7 +172,10 @@ router.post('/close', (req, res) => {
       promptpay_total: grandPromptpay,
       card_total: grandCard,
       truemoney_total: grandTruemoney,
-      employee_count: activeEmployees.length
+      employee_count: activeEmployees.length,
+      backup_created: config.dbPath === ':memory:' ? null : Boolean(backupFile),
+      backup_file: backupFile ? path.basename(backupFile) : null,
+      backup_error: backupError
     });
   }
 

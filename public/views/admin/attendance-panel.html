@@ -1,0 +1,18 @@
+<div id="admin-attendance-admin" class="admin-panel">
+  <h2 data-i18n="admin_attendance">شؤون الموظفين والحضور والانصراف</h2>
+  <p class="admin-muted" data-i18n="attendance_separate_notice">هذا القسم مستقل عن موظفي الكاشير ويخدم سجلات الدوام وأجهزة البصمة.</p>
+  <div class="attendance-toolbar">
+    <label><span data-i18n="attendance_date">التاريخ</span> <input type="date" id="attendance-date"></label>
+    <button class="btn" id="btn-attendance-refresh" data-i18n="refresh">تحديث</button>
+    <button class="btn" id="btn-add-hr-employee" data-i18n="add_hr_employee">+ موظف شؤون موظفين</button>
+    <button class="btn" id="btn-add-biometric-device" data-i18n="add_biometric_device">+ جهاز بصمة</button>
+    <button class="btn attendance-print-btn" id="btn-print-all-hr" data-i18n="print_all_hr">طباعة تقرير الجميع</button>
+  </div>
+  <div class="admin-table-wrapper">
+    <table class="admin-table" id="attendance-admin-table">
+      <thead><tr><th data-i18n="th_name">الاسم</th><th data-i18n="employee_code">الرمز</th><th data-i18n="check_in">الحضور</th><th data-i18n="check_out">الانصراف</th><th data-i18n="attendance_status">الحالة</th><th data-i18n="th_actions">إجراءات</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <div class="attendance-device-list" id="biometric-device-list"></div>
+</div>

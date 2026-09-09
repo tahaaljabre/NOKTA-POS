@@ -15,6 +15,25 @@ function addColumnIfNotExists(db, table, column, type) {
 }
 
 function runMigrations(db) {
+  // New HR/attendance tables are created by schema.js. Keep this migration
+  // marker for installations upgraded from a pre-attendance database.
+  db.prepare(`CREATE TABLE IF NOT EXISTS hr_employees (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, employee_code TEXT NOT NULL UNIQUE,
+    name TEXT NOT NULL, name_en TEXT DEFAULT '', phone TEXT DEFAULT '',
+    department TEXT DEFAULT '', job_title TEXT DEFAULT '', employment_type TEXT DEFAULT 'full_time',
+    active INTEGER DEFAULT 1, hire_date TEXT, attributes TEXT DEFAULT '{}', created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`).run();
+  db.prepare(`CREATE TABLE IF NOT EXISTS attendance_records (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, hr_employee_id INTEGER NOT NULL, attendance_date TEXT NOT NULL,
+    check_in TEXT, check_out TEXT, status TEXT DEFAULT 'present', source TEXT DEFAULT 'manual',
+    device_id INTEGER, note TEXT DEFAULT '', approved_by INTEGER, created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP, UNIQUE(hr_employee_id, attendance_date)
+  )`).run();
+  db.prepare(`CREATE TABLE IF NOT EXISTS biometric_devices (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, provider TEXT NOT NULL,
+    host TEXT DEFAULT '', port INTEGER DEFAULT 0, active INTEGER DEFAULT 1, last_sync_at DATETIME,
+    attributes TEXT DEFAULT '{}', created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`).run();
   // Ensure table columns for backward compatibility & extensibility
   const columnsToAdd = [
     // Orders

@@ -1,0 +1,390 @@
+/* Responsive behavior for tablets and phones. */
+/* ===== Comprehensive Luxury Responsiveness (Mobile, Tablet, Desktop) ===== */
+
+/* Tablets & Small Laptops (769px to 1024px) */
+@media (max-width: 1024px) {
+  .top-bar { padding: 0 10px; overflow: visible; }
+  .top-bar-right h1 { font-size: clamp(11px, 1.8vw, 14px); max-width: min(30vw, 220px); }
+  .header-tools-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--bg);
+    color: var(--primary);
+    font-size: 19px;
+    cursor: pointer;
+    position: relative;
+    z-index: 251;
+  }
+  .header-tools {
+    display: none;
+    position: absolute;
+    top: calc(100% + 7px);
+    inset-inline-end: 0;
+    z-index: 250;
+    min-width: 205px;
+    padding: 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--card);
+    box-shadow: 0 12px 30px rgba(38, 25, 17, 0.2);
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .header-tools.open { display: flex; }
+  .header-tools-user {
+    display: block;
+    padding: 7px 9px;
+    border-radius: var(--radius-sm);
+    background: var(--primary-light);
+    color: var(--primary);
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .header-tools .btn-shift-close,
+  .header-tools .lang-toggle-btn,
+  .header-tools .btn-logout { width: 100%; justify-content: center; }
+  .header-tools #current-time, .header-tools #sync-status { text-align: center; }
+  .pos-order-panel {
+    width: 330px;
+    min-width: 300px;
+  }
+  .menu-grid {
+    grid-template-columns: repeat(auto-fill, minmax(115px, 1fr));
+    gap: 8px;
+    padding: 10px;
+  }
+  .admin-sidebar {
+    width: 170px;
+  }
+  .top-bar-right h1 {
+    font-size: 14px;
+  }
+  .nav-btn {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Medium Tablets & Phones (max-width: 768px) */
+@media (max-width: 768px) {
+  html, body {
+    overflow: auto;
+    height: 100%;
+  }
+
+  .top-bar {
+    padding: 0 8px;
+    height: 50px;
+    gap: 4px;
+  }
+  .top-bar-right h1 {
+    font-size: 13px;
+    max-width: 130px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .current-user {
+    display: none;
+  }
+  .top-bar-center {
+    padding: 2px;
+    gap: 2px;
+  }
+  .nav-btn {
+    padding: 5px 8px;
+    font-size: 11px;
+  }
+  .top-bar-left {
+    gap: 4px;
+  }
+  .lang-toggle-btn, .btn-logout {
+    padding: 4px 6px;
+    font-size: 10.5px;
+  }
+
+  .view {
+    height: calc(100vh - 50px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* POS View on Mobile */
+  #view-pos {
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .pos-mobile-nav {
+    display: flex;
+  }
+
+  .pos-layout {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    height: calc(100% - 46px);
+  }
+
+  .pos-menu-panel {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: none;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg);
+    overflow: hidden;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateX(20px);
+    transition: all 0.25s ease;
+  }
+
+  .pos-menu-panel.mobile-active {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateX(0);
+    z-index: 20;
+  }
+
+  .pos-order-panel {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    min-width: 100%;
+    height: 100%;
+    border: none;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    background: var(--card);
+    overflow: hidden;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateX(-20px);
+    transition: all 0.25s ease;
+  }
+
+  .pos-order-panel.mobile-active {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateX(0);
+    z-index: 20;
+  }
+
+  /* Keep all invoice controls above the mobile panel transition layer. */
+  .pos-order-panel.mobile-active button,
+  .pos-order-panel.mobile-active input,
+  .pos-order-panel.mobile-active select {
+    position: relative;
+    z-index: 30;
+    pointer-events: auto;
+  }
+
+  .category-tabs {
+    padding: 6px 8px;
+    gap: 5px;
+  }
+  .cat-tab {
+    padding: 6px 12px;
+    font-size: 11.5px;
+    border-radius: var(--radius-sm);
+  }
+
+  .menu-grid {
+    grid-template-columns: repeat(auto-fill, minmax(95px, 1fr));
+    gap: 6px;
+    padding: 8px;
+  }
+  .menu-item {
+    padding: 8px 4px;
+    min-height: 75px;
+    gap: 3px;
+    border-radius: var(--radius-sm);
+  }
+  .menu-item-name {
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .menu-item-price {
+    font-size: 11.5px;
+    padding: 1px 6px;
+  }
+  .menu-item.has-image {
+    padding: 5px;
+    min-height: 105px;
+  }
+  .menu-item-img {
+    height: 52px;
+    margin-bottom: 3px;
+  }
+
+  .order-header {
+    padding: 6px 7px;
+    flex-shrink: 0;
+    gap: 4px;
+  }
+  .order-info { gap: 4px; min-width: 0; }
+  .order-number {
+    font-size: 11px;
+    white-space: nowrap;
+  }
+  .btn-type {
+    min-height: 27px;
+    padding: 3px 4px;
+    gap: 2px;
+    font-size: 10px;
+    white-space: nowrap;
+    line-height: 1.1;
+  }
+  .type-label { overflow-wrap: anywhere; }
+  .type-icon { font-size: 11px; }
+  .order-type-buttons { grid-template-columns: 1fr 1fr; gap: 3px; }
+  .table-select-wrapper { min-height: 27px; padding: 2px 4px; font-size: 10px; gap: 2px; }
+  .table-select-inline { font-size: 10px; }
+
+  .order-items {
+    padding: 6px 10px;
+    flex: 1;
+  }
+  .order-item {
+    padding: 6px 0;
+  }
+  .order-item-name {
+    font-size: 12px;
+  }
+  .order-item-price {
+    font-size: 11px;
+  }
+  .qty-btn {
+    width: 26px;
+    height: 26px;
+    font-size: 13px;
+  }
+
+  .order-footer {
+    padding: 8px 10px;
+    flex-shrink: 0;
+  }
+  .order-note input {
+    padding: 6px 8px;
+    font-size: 11.5px;
+    margin-bottom: 5px;
+  }
+  .order-totals {
+    padding: 6px 8px;
+    margin-bottom: 6px;
+  }
+  .total-row {
+    font-size: 11.5px;
+    padding: 2px 0;
+  }
+  .grand-total {
+    font-size: 14px;
+    padding-top: 4px;
+    margin-top: 2px;
+  }
+  .grand-total span:nth-child(2) {
+    font-size: 16px;
+  }
+  .order-actions {
+    gap: 6px;
+  }
+  .order-actions .btn {
+    padding: 10px 4px;
+    font-size: 12px;
+  }
+
+  /* Admin & Other Views on Mobile */
+  .admin-layout {
+    flex-direction: column;
+    overflow: auto;
+  }
+  .admin-sidebar {
+    width: 100%;
+    flex-direction: row;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 6px;
+    gap: 4px;
+    border-left: none;
+    border-bottom: 1.5px solid var(--border);
+    background: var(--card);
+    scrollbar-width: none;
+  }
+  .admin-sidebar::-webkit-scrollbar { display: none; }
+  .admin-tab {
+    padding: 6px 12px;
+    font-size: 11.5px;
+    white-space: nowrap;
+    border-radius: var(--radius-sm);
+  }
+
+  .admin-toolbar {
+    padding: 8px 10px;
+    gap: 6px;
+  }
+  .admin-toolbar input,
+  .admin-toolbar select,
+  .admin-toolbar .btn {
+    font-size: 11.5px;
+    padding: 6px 8px;
+  }
+
+  .tables-container {
+    grid-template-columns: repeat(auto-fill, minmax(105px, 1fr));
+    padding: 8px;
+    gap: 8px;
+  }
+  .active-orders-list {
+    grid-template-columns: 1fr;
+    padding: 8px;
+  }
+  .view-content-wrapper {
+    padding: 8px;
+  }
+  .closing-stats, .stats-grid {
+    grid-template-columns: 1fr;
+  }
+  .modal {
+    width: 95%;
+    max-height: 92vh;
+    padding: 14px;
+  }
+}
+
+/* Small Mobile Screens (max-width: 420px) */
+@media (max-width: 420px) {
+  .top-bar {
+    height: 46px;
+    padding: 0 6px;
+  }
+  .top-bar-right h1 {
+    font-size: 12px;
+    max-width: 95px;
+  }
+  .nav-btn {
+    padding: 4px 6px;
+    font-size: 10.5px;
+  }
+  .menu-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 5px;
+    padding: 6px;
+  }
+  .menu-item {
+    min-height: 68px;
+  }
+}

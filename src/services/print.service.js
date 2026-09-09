@@ -3,12 +3,12 @@ escpos.Network = require('escpos-network');
 try {
   escpos.USB = require('escpos-usb');
 } catch (e) {
-  console.log('USB adapter not available');
+  // USB adapter not available
 }
 try {
   escpos.Bluetooth = require('escpos-bluetooth');
 } catch (e) {
-  console.log('Bluetooth adapter not available');
+  // Bluetooth adapter not available
 }
 const net = require('net');
 const { db } = require('../database/db');

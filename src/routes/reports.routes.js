@@ -2,6 +2,7 @@ const router=require('express').Router();
 const {db}=require('../database/db');
 const {requirePermission}=require('../middleware/auth.middleware');
 const {dayOf,range}=require('../services/business-time');
+const {createSalesReportXlsx}=require('../services/sales-report-excel.service');
 router.use(requirePermission('reports'));
 function report(from,to,employeeId){
  const {start,end}=range(from,to);
@@ -18,6 +19,18 @@ function report(from,to,employeeId){
  return {from,to,timezone:require('../services/business-time').zone(),daily:[...days.values()].map(d=>({...d,revenue:d.revenue/100})).sort((a,b)=>a.day.localeCompare(b.day)),by_payment:[...payments.values()].map(p=>({...p,total:p.total/100})),by_channel:[...channels.values()].map(c=>({...c,total:c.total/100})),by_employee:[...employees.values()].map(e=>({...e,total:e.total/100})),totals:{total_orders:rows.length,total_revenue:cents/100}};
 }
 router.get('/sales',(req,res)=>res.json(report(req.query.from||dayOf(),req.query.to||req.query.from||dayOf(),req.query.employee_id)));
+router.get('/sales.xlsx',async(req,res,next)=>{
+ try{
+  const from=req.query.from||dayOf(),to=req.query.to||req.query.from||dayOf();
+  const data=report(from,to,req.query.employee_id);
+  const language=String(req.headers['accept-language']||'ar').startsWith('en')?'en':'ar';
+  const currency=db.prepare("SELECT value FROM settings WHERE key='currency'").get()?.value||'฿';
+  const buffer=await createSalesReportXlsx(data,{language,currency});
+  res.setHeader('Cache-Control','no-store');
+  res.setHeader('Content-Type','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  res.setHeader('Content-Disposition',`attachment; filename="nokta-sales-${from}-to-${to}.xlsx"`);
+  res.send(Buffer.from(buffer));
+ }catch(error){next(error);}
+});
 router.get('/daily',(req,res)=>{const date=req.query.date||dayOf(),r=report(date,date,req.query.employee_id);res.json({date,total_orders:r.totals.total_orders,total_revenue:r.totals.total_revenue,by_employee:Object.fromEntries(r.by_employee.map(e=>[e.employee_name,{count:e.count,total:e.total}]))});});
 module.exports=router;
-

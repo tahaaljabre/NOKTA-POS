@@ -26,6 +26,11 @@ router.get('/phone/:phone', (req, res) => {
 router.post('/', requirePermission('customers'), (req, res) => {
   const { name, phone, email, address, delivery_notes, attributes } = req.body;
   if (!name || !phone) return res.status(400).json({ error: 'Name and Phone required' });
+  if (name.length > 200) return res.status(400).json({ error: 'الاسم طويل جداً / Name too long (max 200 characters)' });
+  if (phone.length > 30) return res.status(400).json({ error: 'الهاتف طويل جداً / Phone too long (max 30 characters)' });
+  if (email && email.length > 200) return res.status(400).json({ error: 'البريد طويل جداً / Email too long (max 200 characters)' });
+  if (address && address.length > 500) return res.status(400).json({ error: 'العنوان طويل جداً / Address too long (max 500 characters)' });
+  if (delivery_notes && delivery_notes.length > 500) return res.status(400).json({ error: 'الملاحظات طويلة جداً / Notes too long (max 500 characters)' });
 
   const existing = db.prepare('SELECT id FROM customers WHERE phone=?').get(phone);
   if (existing) {

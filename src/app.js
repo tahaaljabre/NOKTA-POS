@@ -21,6 +21,7 @@ const settingsRoutes = require('./routes/settings.routes');
 const printRoutes = require('./routes/print.routes');
 const syncRoutes = require('./routes/sync.routes');
 const backupRoutes = require('./routes/backup.routes');
+const attendanceRoutes = require('./routes/attendance.routes');
 const { requirePermission } = require('./middleware/auth.middleware');
 
 function createApp() {
@@ -68,6 +69,13 @@ function createApp() {
 
   // Login Brute-Force Rate Limiter (max five attempts per minute per IP)
   const loginAttempts = new Map();
+  const loginAttemptsCleanupTimer = setInterval(() => {
+    const now = Date.now();
+    for (const [key, value] of loginAttempts) {
+      if (now - value.firstAttempt > 60000) loginAttempts.delete(key);
+    }
+  }, 120000);
+  loginAttemptsCleanupTimer.unref?.();
   app.use(['/api/auth/login', '/api/auth/setup-admin'], (req, res, next) => {
     const ip = req.ip || req.connection.remoteAddress || 'unknown';
     const now = Date.now();
@@ -110,6 +118,7 @@ function createApp() {
   app.get('/api/audit', requirePermission('audit'), settingsRoutes.handleAuditGet);
   app.use('/api/sync', syncRoutes);
   app.use('/api/backup', backupRoutes);
+  app.use('/api/attendance', attendanceRoutes);
 
   // Single Page App Fallback for GET requests
   app.use('/api',(req,res)=>res.status(404).json({error:'المسار غير موجود / API endpoint not found'}));

@@ -1,0 +1,17 @@
+<div id="admin-reports-admin" class="admin-panel">
+            <h2 data-i18n="admin_reports">التقارير اليومية والمبيعات</h2>
+            <div class="admin-toolbar">
+              <label data-i18n="from">من</label>
+              <input type="date" id="report-from">
+              <label data-i18n="to">إلى</label>
+              <input type="date" id="report-to">
+              <select id="report-employee-filter">
+                <option value="" data-i18n="all_employees">كل الموظفين</option>
+              </select>
+              <button class="btn" id="btn-load-report" onclick="loadAdminReport()" data-i18n="load">عرض التقرير</button>
+              <button class="btn btn-save" onclick="printAdminReport()" data-i18n="print_report">🖨️ طباعة
+                التقرير</button>
+              <button class="btn btn-save" onclick="exportAdminReportExcel()">📊 <span data-i18n="export_excel">تصدير Excel</span></button>
+            </div>
+            <div class="report-content" id="report-content"></div>
+          </div>

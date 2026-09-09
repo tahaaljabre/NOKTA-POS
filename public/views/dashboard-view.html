@@ -1,0 +1,51 @@
+<!-- Dashboard View (Advanced Analytics) -->
+    <div id="view-dashboard" class="view">
+      <div class="view-content-wrapper">
+        <div class="admin-toolbar">
+          <div class="dashboard-range-presets" role="group" aria-label="فترة التقرير">
+            <button type="button" class="dashboard-range-btn" data-range="today" data-i18n="dash_today">اليوم</button>
+            <button type="button" class="dashboard-range-btn" data-range="week" data-i18n="dash_week">هذا الأسبوع</button>
+            <button type="button" class="dashboard-range-btn" data-range="month" data-i18n="dash_month">هذا الشهر</button>
+            <button type="button" class="dashboard-range-btn active" data-range="custom" data-i18n="dash_custom">مخصص</button>
+          </div>
+          <label data-i18n="from">من</label>
+          <input type="date" id="dash-from">
+          <label data-i18n="to">إلى</label>
+          <input type="date" id="dash-to">
+          <select id="dash-employee-filter">
+            <option value="" data-i18n="all_employees">كل الموظفين</option>
+          </select>
+          <button class="btn" onclick="loadDashboard()" data-i18n="load">عرض</button>
+        </div>
+        <div id="dashboard-content" class="dashboard-scroll-area" style="padding: 20px;">
+          <div class="dashboard-hero">
+            <div>
+              <span class="dashboard-eyebrow" data-i18n="dash_overview">نظرة المبيعات</span>
+              <h2 data-i18n="dash_title">لوحة المبيعات والتحصيل</h2>
+              <p id="dashboard-period-label"></p>
+            </div>
+            <div class="dashboard-live-mark"><span></span><span data-i18n="dash_completed_only">الطلبات المكتملة فقط</span></div>
+          </div>
+          <div class="dashboard-kpi-grid">
+            <div class="dashboard-kpi dashboard-kpi-total"><span data-i18n="dash_total_sales">إجمالي المبيعات</span><strong id="dash-total-revenue">0.00</strong><small id="dash-total-orders">0 طلب</small></div>
+            <div class="dashboard-kpi dashboard-kpi-cash"><span data-i18n="dash_cash_sales">المبيعات النقدية</span><strong id="dash-cash-sales">0.00</strong><small id="dash-cash-orders">0 طلب</small></div>
+            <div class="dashboard-kpi dashboard-kpi-network"><span data-i18n="dash_network_sales">مبيعات الشبكة</span><strong id="dash-network-sales">0.00</strong><small id="dash-network-orders">0 طلب</small></div>
+            <div class="dashboard-kpi dashboard-kpi-delivery"><span data-i18n="dash_delivery_sales">مبيعات التوصيل</span><strong id="dash-delivery-sales">0.00</strong><small id="dash-delivery-orders">0 طلب</small></div>
+          </div>
+          <!-- Chart Containers -->
+          <div style="display:flex; gap:20px; flex-wrap:wrap; margin-bottom:20px;">
+            <div style="flex:1; min-width:300px; background:var(--bg-card); padding:15px; border-radius:8px;">
+              <canvas id="salesTrendChart"></canvas>
+            </div>
+            <div style="flex:1; min-width:300px; background:var(--bg-card); padding:15px; border-radius:8px;">
+              <canvas id="paymentMethodChart"></canvas>
+            </div>
+          </div>
+          <div style="display:flex; gap:20px; flex-wrap:wrap;">
+            <div style="flex:1; min-width:300px; background:var(--bg-card); padding:15px; border-radius:8px;">
+              <canvas id="employeeSalesChart"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>

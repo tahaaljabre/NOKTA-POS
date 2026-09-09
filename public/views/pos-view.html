@@ -1,0 +1,105 @@
+<!-- POS View -->
+    <div id="view-pos" class="view active">
+      <!-- Mobile POS Sub-Tabs (Menu / Current Bill) -->
+      <div class="pos-mobile-nav" id="pos-mobile-nav">
+        <button class="pos-mobile-tab active" id="tab-btn-menu" onclick="switchMobilePosTab('menu')">
+          <span>📋</span> <span data-i18n="menu_tab">قائمة المنيو</span>
+        </button>
+        <button class="pos-mobile-tab" id="tab-btn-bill" onclick="switchMobilePosTab('bill')">
+          <span>🛒</span> <span data-i18n="order_tab">الفاتورة والطلب</span>
+          <span class="mobile-cart-badge" id="mobile-cart-badge">0</span>
+        </button>
+      </div>
+
+      <div class="pos-layout">
+        <div class="pos-menu-panel" id="pos-menu-panel">
+          <div class="menu-search-bar" id="menu-search-bar">
+            <div class="search-input-wrap">
+              <span class="search-icon">🔍</span>
+              <input type="search" id="menu-search-input" class="menu-search-input"
+                placeholder="بحث سريع في الأصناف (+400 صنف) أو الباركود..." data-i18n-placeholder="search_menu_ph"
+                autocomplete="off">
+              <button type="button" id="menu-search-clear" class="search-clear-btn hidden">&times;</button>
+            </div>
+            <div class="station-badge-wrap">
+              <select id="pos-station-select" class="pos-station-select" title="محطة الكاشير / الطابعة الحالية">
+                <option value="cashier_floor1">📍 كاشير الدور 1</option>
+                <option value="cashier_floor2">📍 كاشير الدور 2</option>
+                <option value="waiter_mobile">📱 نادل جوال</option>
+              </select>
+            </div>
+          </div>
+          <div class="category-tabs" id="category-tabs"></div>
+          <div class="menu-grid" id="menu-grid"></div>
+        </div>
+        <div class="pos-order-panel" id="pos-order-panel">
+          <div class="order-header">
+            <div class="order-info">
+              <span class="order-number" id="current-order-number" data-i18n="new_order">طلب جديد</span>
+            </div>
+            <div class="order-type-buttons">
+              <button type="button" class="btn btn-type active" data-type="dine_in"><span class="type-icon">🍽️</span><span class="type-label" data-i18n="dine_in">داخل المطعم</span></button>
+              <button type="button" class="btn btn-type" data-type="takeaway"><span class="type-icon">🥡</span><span class="type-label" data-i18n="takeaway">سفري</span></button>
+              <button type="button" class="btn btn-type" data-type="delivery"><span class="type-icon">🛵</span><span class="type-label" data-i18n="delivery">توصيل</span></button>
+              <div class="table-select-wrapper">
+                <span class="type-icon">🪑</span>
+                <select id="table-select" class="table-select-inline"></select>
+              </div>
+            </div>
+            <div id="customer-select-row" style="display:none; gap:5px; margin-top:5px;">
+              <select id="customer-select" class="form-control" style="flex:1;">
+                <option value="">-- اختيار عميل --</option>
+              </select>
+              <button class="btn btn-secondary" onclick="openCustomerModal()" style="padding:5px;">➕</button>
+            </div>
+          </div>
+          <div class="order-items" id="order-items">
+            <div class="empty-order" data-i18n="add_items">أضف عناصر من القائمة</div>
+          </div>
+          <div class="order-footer">
+            <div class="order-note">
+              <input type="text" id="order-note" data-i18n-placeholder="order_note_ph"
+                placeholder="ملاحظة على الطلب...">
+            </div>
+            <div class="order-totals">
+              <div class="total-row payment-select-row">
+                <span data-i18n="payment_method">طريقة الدفع</span>
+                <button type="button" class="btn" id="btn-select-payment" style="min-width:120px; font-weight:bold;">💵 <span data-i18n="payment_cash">نقداً (كاش)</span></button>
+              </div>
+              <div class="total-row"><span data-i18n="subtotal">المجموع</span><span id="order-subtotal">0</span> <span
+                  class="currency" data-i18n="currency">ريال</span></div>
+              <div class="total-row discount-row">
+                <span data-i18n="discount">خصم %</span>
+                <input type="number" id="discount-input" value="0" min="0" max="100" class="discount-input">
+                <span id="order-discount-val">0</span> <span class="currency" data-i18n="currency">ريال</span>
+              </div>
+              <div class="total-row grand-total"><span data-i18n="total">الإجمالي</span><span id="order-total">0</span>
+                <span class="currency" data-i18n="currency">ريال</span></div>
+              <div class="total-row cash-calc-row" id="cash-calc-row">
+                <span data-i18n="cash_received">المبلغ المدفوع</span>
+                <div class="cash-input-wrap">
+                  <input type="number" id="cash-received-input" placeholder="0.00" class="cash-received-input"
+                    step="any">
+                  <div class="quick-cash-chips" id="quick-cash-chips">
+                    <button type="button" class="cash-chip" data-val="exact" data-i18n="exact">المبلغ تماماً</button>
+                    <button type="button" class="cash-chip" data-val="100">+100</button>
+                    <button type="button" class="cash-chip" data-val="500">+500</button>
+                    <button type="button" class="cash-chip" data-val="1000">+1000</button>
+                  </div>
+                </div>
+              </div>
+              <div class="total-row change-row" id="change-row">
+                <span data-i18n="change_due">الباقي للعميل</span>
+                <span class="change-val" id="order-change-val">0.00</span> <span class="currency"
+                  data-i18n="currency">ريال</span>
+              </div>
+            </div>
+            <div class="order-actions">
+              <button class="btn btn-save" id="btn-save-order" data-i18n="save_order">حفظ الطلب</button>
+              <button class="btn btn-print" id="btn-print-order" data-i18n="print">طباعة</button>
+              <button class="btn btn-new" id="btn-new-order" data-i18n="new">جديد</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>

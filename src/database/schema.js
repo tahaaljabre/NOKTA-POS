@@ -260,6 +260,52 @@ const schemaQueries = [
     last_sync DATETIME DEFAULT CURRENT_TIMESTAMP
   )`,
 
+  // 20. HR employees are separate from POS cashier accounts.
+  `CREATE TABLE IF NOT EXISTS hr_employees (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    employee_code TEXT NOT NULL UNIQUE,
+    name TEXT NOT NULL,
+    name_en TEXT DEFAULT '',
+    phone TEXT DEFAULT '',
+    department TEXT DEFAULT '',
+    job_title TEXT DEFAULT '',
+    employment_type TEXT DEFAULT 'full_time',
+    active INTEGER DEFAULT 1,
+    hire_date TEXT,
+    attributes TEXT DEFAULT '{}',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`,
+
+  // 21. Attendance events imported from manual entry or biometric devices.
+  `CREATE TABLE IF NOT EXISTS attendance_records (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    hr_employee_id INTEGER NOT NULL,
+    attendance_date TEXT NOT NULL,
+    check_in TEXT,
+    check_out TEXT,
+    status TEXT DEFAULT 'present',
+    source TEXT DEFAULT 'manual',
+    device_id INTEGER,
+    note TEXT DEFAULT '',
+    approved_by INTEGER,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(hr_employee_id, attendance_date)
+  )`,
+
+  // 22. Registered biometric devices; templates remain on the device/provider.
+  `CREATE TABLE IF NOT EXISTS biometric_devices (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    provider TEXT NOT NULL,
+    host TEXT DEFAULT '',
+    port INTEGER DEFAULT 0,
+    active INTEGER DEFAULT 1,
+    last_sync_at DATETIME,
+    attributes TEXT DEFAULT '{}',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`,
+
   // 19. Performance Indexes for High-Speed Queries across Multi-Stations
   `CREATE INDEX IF NOT EXISTS idx_items_cat_active ON items(category_id, active, sort_order)`,
   `CREATE INDEX IF NOT EXISTS idx_items_barcode ON items(barcode)`,
@@ -268,6 +314,9 @@ const schemaQueries = [
   `CREATE INDEX IF NOT EXISTS idx_orders_emp_date ON orders(employee_id, completed_at)`,
   `CREATE INDEX IF NOT EXISTS idx_order_items_order_id ON order_items(order_id)`,
   `CREATE INDEX IF NOT EXISTS idx_audit_log_emp_action ON audit_log(employee_id, action, created_at)`
+  ,
+  `CREATE INDEX IF NOT EXISTS idx_attendance_date ON attendance_records(attendance_date, hr_employee_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_hr_employees_active ON hr_employees(active, employee_code)`
 ];
 
 module.exports = { schemaQueries };

@@ -1,0 +1,230 @@
+<!-- Modifier Selection Modal -->
+  <div id="modifier-modal" class="modal-overlay">
+    <div class="modal" style="max-width: 500px;">
+      <div class="modal-header">
+        <h2 id="modifier-item-name">Select Options</h2>
+        <button class="close-btn" onclick="document.getElementById('modifier-modal').classList.remove('open')">✕</button>
+      </div>
+      <div class="modal-body" id="modifier-groups-container" style="max-height: 60vh; overflow-y: auto;">
+        <!-- Modifier groups will be injected here -->
+      </div>
+      <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center;">
+        <div style="font-size: 1.2rem; font-weight: bold;">
+          المجموع: <span id="modifier-total-price">0.00</span>
+        </div>
+        <button class="btn btn-primary" id="btn-add-modifier-item">إضافة للطلب</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal -->
+  <div class="modal-overlay" id="modal-overlay">
+    <div class="modal" id="modal">
+      <div class="modal-header">
+        <h3 id="modal-title"></h3><button class="modal-close" id="modal-close">&times;</button>
+      </div>
+      <div class="modal-body" id="modal-body"></div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- Inventory Modal -->
+  <div class="modal-overlay" id="inventory-modal" style="display:none; z-index:9999;">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>إضافة / تعديل المخزون</h2>
+        <button class="modal-close" onclick="closeInventoryModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="inv-id">
+        <div class="form-group">
+          <label>الارتباط بصنف منيو (Menu Item)</label>
+          <select id="inv-menu-item-id" class="form-control"></select>
+        </div>
+        <div class="form-group">
+          <label>اسم صنف المخزون (Inventory Name) *</label>
+          <input type="text" id="inv-item-name" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <label>الكمية الحالية (Current Qty)</label>
+          <input type="number" id="inv-quantity" class="form-control" step="0.01">
+        </div>
+        <div class="form-group">
+          <label>الوحدة (Unit)</label>
+          <select id="inv-unit" class="form-control">
+            <option value="pcs">حبة (pcs)</option>
+            <option value="kg">كيلو (kg)</option>
+            <option value="g">جرام (g)</option>
+            <option value="l">لتر (L)</option>
+            <option value="ml">مل (ml)</option>
+            <option value="box">كرتون (box)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>حد التنبيه (Alert Level)</label>
+          <input type="number" id="inv-min-alert" class="form-control" step="0.01" value="5">
+        </div>
+      </div>
+      <div class="modal-footer" style="padding:15px; text-align:right;">
+        <button class="btn btn-secondary" onclick="closeInventoryModal()">إلغاء</button>
+        <button class="btn btn-primary" onclick="saveInventoryItem()">حفظ</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Adjust Stock Modal -->
+  <div class="modal-overlay" id="adjust-stock-modal" style="display:none; z-index:9999;">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>تعديل رصيد المخزون</h2>
+        <button class="modal-close" onclick="closeAdjustStockModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="adj-inv-id">
+        <p><strong>الصنف:</strong> <span id="adj-item-name"></span></p>
+        <p><strong>الرصيد الحالي:</strong> <span id="adj-current-qty"></span></p>
+        <div class="form-group">
+          <label>التغيير (Change) <small>ضع رقم سالب للخصم</small></label>
+          <input type="number" id="adj-change" class="form-control" step="0.01" placeholder="e.g. 10 or -5">
+        </div>
+        <div class="form-group">
+          <label>ملاحظات (Notes)</label>
+          <input type="text" id="adj-notes" class="form-control" placeholder="سبب التعديل">
+        </div>
+      </div>
+      <div class="modal-footer" style="padding:15px; text-align:right;">
+        <button class="btn btn-secondary" onclick="closeAdjustStockModal()">إلغاء</button>
+        <button class="btn btn-primary" onclick="saveStockAdjustment()">حفظ التعديل</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Customer Modal -->
+  <div class="modal-overlay" id="customer-modal" style="display:none; z-index:9999;">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>إضافة عميل جديد</h2>
+        <button class="modal-close" onclick="closeCustomerModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>الاسم (Name) *</label>
+          <input type="text" id="cust-name" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <label>رقم الجوال (Phone) *</label>
+          <input type="text" id="cust-phone" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <label>البريد الإلكتروني (Email)</label>
+          <input type="email" id="cust-email" class="form-control">
+        </div>
+      </div>
+      <div class="modal-footer" style="padding:15px; text-align:right;">
+        <button class="btn btn-secondary" onclick="closeCustomerModal()">إلغاء</button>
+        <button class="btn btn-primary" onclick="saveCustomer()">حفظ العميل</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delivery Method Selection Modal (POS) -->
+  <div class="modal-overlay" id="delivery-select-modal" style="display:none; z-index:9999;">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>اختر تطبيق التوصيل</h2>
+        <button class="modal-close" onclick="closeDeliverySelectModal()">&times;</button>
+      </div>
+      <div class="modal-body" style="text-align: center;">
+        <div id="delivery-buttons-container" style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin: 20px 0;">
+          <!-- Dynamically populated buttons -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Payment Method Selection Modal (POS) -->
+  <div class="modal-overlay" id="payment-select-modal" style="display:none; z-index:9999;">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>اختر طريقة الدفع</h2>
+        <button class="modal-close" onclick="closePaymentSelectModal()">&times;</button>
+      </div>
+      <div class="modal-body" style="text-align: center;">
+        <div id="payment-buttons-container" style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin: 20px 0;">
+          <!-- Dynamically populated buttons -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Manage Dynamic Methods Modal (Admin) -->
+  <div class="modal-overlay" id="manage-methods-modal" style="display:none; z-index:9999;">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="manage-methods-title">إدارة الطرق</h2>
+        <button class="modal-close" onclick="closeManageMethodsModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="admin-toolbar" style="margin-bottom: 10px;">
+          <input type="text" id="new-method-id" data-i18n-placeholder="method_id_ph" placeholder="المعرف (e.g. grab)" style="width: 30%;">
+          <input type="text" id="new-method-name" data-i18n-placeholder="method_name_ph" placeholder="الاسم الظاهر (e.g. GrabFood)" style="width: 50%;">
+          <button class="btn btn-primary" data-i18n="add" onclick="addDynamicMethod()">إضافة</button>
+        </div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th data-i18n="th_id">المعرف (ID)</th>
+              <th data-i18n="th_name">الاسم (Name)</th>
+              <th data-i18n="th_status">الحالة</th>
+              <th data-i18n="th_actions">إجراءات</th>
+            </tr>
+          </thead>
+          <tbody id="manage-methods-table-body">
+            <!-- Dynamically populated -->
+          </tbody>
+        </table>
+      </div>
+      <div class="modal-footer" style="padding:15px; text-align:right;">
+        <button class="btn btn-save" data-i18n="save_changes" onclick="saveManagedMethods()">حفظ التغييرات</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Printer Configuration Modal -->
+  <div id="printer-modal" class="modal-overlay">
+    <div class="modal" style="max-width: 500px;">
+      <div class="modal-header">
+        <h2 id="printer-modal-title" data-i18n="add_new_printer">إضافة طابعة جديدة</h2>
+        <button class="close-btn" onclick="document.getElementById('printer-modal').classList.remove('open')">✕</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="printer-modal-index" value="-1">
+        
+        <label style="display:block;margin-bottom:5px;" data-i18n="printer_name_label">الاسم المخصص للقسم (مثال: مطبخ الشواية):</label>
+        <input type="text" id="printer-modal-name" class="form-input" style="width:100%;margin-bottom:15px;" placeholder="اسم الطابعة">
+        
+        <label style="display:block;margin-bottom:5px;" data-i18n="printer_device_label">الطابعة المكتشفة:</label>
+        <div style="display:flex; gap: 8px; margin-bottom: 15px;">
+          <select id="printer-modal-device" class="form-input printer-device-select" style="flex:1;">
+            <option value="">-- اختر طابعة --</option>
+          </select>
+          <button type="button" class="btn" style="flex-shrink:0;" onclick="detectLocalPrinters()">🔄</button>
+        </div>
+
+        <label style="display:flex;align-items:center;gap:8px;margin-bottom:15px;cursor:pointer;">
+          <input type="checkbox" id="printer-modal-auto"> 
+          <span data-i18n="printer_auto_print_label">طباعة تلقائية للطلبات الموجهة لهذا القسم</span>
+        </label>
+        <label style="display:block;margin-bottom:7px;font-weight:600;">الأقسام التي تطبع على هذه الطابعة</label>
+        <p style="margin:0 0 8px;font-size:12px;color:var(--text-light);">اختر أقسام المنيو؛ ستصل للطابعة أصناف هذه الأقسام فقط.</p>
+        <div id="printer-modal-categories" style="max-height:190px;overflow:auto;border:1px solid var(--border);border-radius:8px;padding:8px;"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-save" style="width: 100%;" onclick="savePrinterConfig()" data-i18n="save">حفظ الطابعة</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->

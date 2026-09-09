@@ -1,0 +1,23 @@
+<div id="admin-audit-admin" class="admin-panel">
+            <h2 data-i18n="admin_audit">نافذة التدقيق</h2>
+            <div class="audit-controls">
+              <select id="audit-employee-filter">
+                <option value="" data-i18n="all_employees">كل الموظفين</option>
+              </select>
+              <select id="audit-action-filter">
+                <option value="" data-i18n="all_actions">كل الإجراءات</option>
+                <option value="create_order">🧾 طلب / فاتورة جديدة</option>
+                <option value="update_order">📝 تعديل فاتورة</option>
+                <option value="delete_order">🗑️ حذف فاتورة</option>
+                <option value="complete_order">✅ إكمال فاتورة</option>
+                <option value="cancel_order">❌ إلغاء طلب</option>
+                <option value="login" data-i18n="action_login">دخول</option>
+                <option value="create" data-i18n="action_create">إضافة صنف/عنصر</option>
+                <option value="update" data-i18n="action_update">تعديل صنف/إعدادات</option>
+                <option value="delete" data-i18n="action_delete">حذف صنف/موظف</option>
+              </select>
+              <input type="date" id="audit-date-filter">
+              <button class="btn" id="btn-load-audit" onclick="loadAuditAdmin()" data-i18n="load">عرض</button>
+            </div>
+            <div id="audit-cards-container" class="audit-cards-container"></div>
+          </div>

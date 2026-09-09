@@ -1,0 +1,20 @@
+<div id="admin-daily-closing-admin" class="admin-panel">
+            <h2 data-i18n="admin_daily_closing">الإغلاق اليومي ومطابقة الصناديق</h2>
+            <div class="admin-toolbar" style="gap:8px;flex-wrap:wrap;">
+              <input type="date" id="closing-date">
+              <select id="closing-employee-filter">
+                <option value="" data-i18n="all_employees">كل الموظفين</option>
+              </select>
+              <button class="btn" onclick="loadDailyClosing()" data-i18n="load">🔍 عرض</button>
+              <button class="btn" onclick="printDailyClosingThermal()" style="background:#6c757d;color:#fff;"
+                title="طباعة فورية على الطابعة الحرارية 80mm">🧾 طباعة حرارية (80mm)</button>
+              <button class="btn" onclick="printDailyClosingReport()" style="background:#5a6268;color:#fff;"
+                data-i18n="print_closing">📄 طباعة A4 / PDF</button>
+              <button class="btn btn-save" onclick="closeGrandRestaurantDay()"
+                style="background:linear-gradient(135deg,#721c24,#531118);color:#fff;"
+                title="إغلاق كلي لجميع كاشيرات ونوادل المطعم">
+                🏛️ الإغلاق الكلي للمطعم (كل الموظفين)
+              </button>
+            </div>
+            <div id="closing-content"></div>
+          </div>

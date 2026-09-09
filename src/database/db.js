@@ -11,10 +11,6 @@ if (!fs.existsSync(config.dbDir)) {
 
 let _sqlDb = null;
 
-function saveToDisk(immediate = false) {
-  // No-op for better-sqlite3 as it writes directly to disk
-}
-
 function hashPin(pin) {
   const salt = crypto.randomBytes(16).toString('hex');
   const derived = crypto.scryptSync(String(pin), salt, 32).toString('hex');
@@ -159,7 +155,6 @@ async function initDatabase() {
      ['invoice_retention_days', '365'], ['next_invoice_number', '1']].forEach(s => {
       db.prepare('INSERT INTO settings (key, value) VALUES (?, ?)').run(s[0], s[1]);
     });
-    console.log('Database initialized and seeded.');
   }
 
   // Ensure dynamic delivery and payment lists exist in settings for existing databases
@@ -186,4 +181,4 @@ async function initDatabase() {
   return db;
 }
 
-module.exports = { db, initDatabase, hashPin, verifyPin, saveToDisk };
+module.exports = { db, initDatabase, hashPin, verifyPin };

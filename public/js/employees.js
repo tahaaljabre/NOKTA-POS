@@ -3,7 +3,7 @@ async function loadEmployeesAdmin() {
   document.querySelector('#employees-admin-table tbody').innerHTML = emps.map(e => {
     const perms = typeof e.permissions === 'string' ? JSON.parse(e.permissions) : e.permissions;
     const permList = Object.entries(perms).filter(([k, v]) => v).map(([k]) => {
-      const map = { pos: t('perm_pos'), menu: t('perm_menu'), reports: t('perm_reports'), settings: t('perm_settings'), audit: t('perm_audit'), employees: t('perm_employees'), inventory: 'المخزون', tables: 'الطاولات', dashboard: 'لوحة القيادة', customers: 'العملاء' };
+      const map = { pos: t('perm_pos'), menu: t('perm_menu'), reports: t('perm_reports'), settings: t('perm_settings'), audit: t('perm_audit'), employees: t('perm_employees'), attendance: t('perm_attendance'), inventory: 'المخزون', tables: 'الطاولات', dashboard: 'لوحة القيادة', customers: 'العملاء' };
       return map[k] || k;
     }).join(', ');
     const roleTitle = e.role === 'admin' ? `👑 ${t('emp_role_admin')}` : e.role === 'waiter' ? `🤵 ${t('emp_role_waiter')}` : `💵 ${t('emp_role_cashier')}`;
@@ -94,6 +94,7 @@ async function openEmployeeModal(empId = null) {
       <label><input type="checkbox" id="perm-settings" ${perms.settings ? 'checked' : ''}> ${t('perm_settings')}</label>
       <label><input type="checkbox" id="perm-audit" ${perms.audit ? 'checked' : ''}> ${t('perm_audit')}</label>
       <label><input type="checkbox" id="perm-employees" ${perms.employees ? 'checked' : ''}> ${t('perm_employees')}</label>
+      <label><input type="checkbox" id="perm-attendance" ${perms.attendance ? 'checked' : ''}> ${t('perm_attendance')}</label>
       <label><input type="checkbox" id="perm-customers" ${perms.customers ? 'checked' : ''}> إدارة العملاء (Customers)</label>
       <label><input type="checkbox" id="perm-inventory" ${perms.inventory ? 'checked' : ''}> إدارة المخزون (Inventory)</label>
       <label><input type="checkbox" id="perm-tables" ${perms.tables ? 'checked' : ''}> إدارة الطاولات (Tables)</label>
@@ -126,6 +127,7 @@ async function openEmployeeModal(empId = null) {
           settings: document.getElementById('perm-settings').checked,
           audit: document.getElementById('perm-audit').checked,
           employees: document.getElementById('perm-employees').checked,
+          attendance: document.getElementById('perm-attendance').checked,
           customers: document.getElementById('perm-customers').checked,
           inventory: document.getElementById('perm-inventory').checked,
           tables: document.getElementById('perm-tables').checked,

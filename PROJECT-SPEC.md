@@ -42,18 +42,16 @@ C:\Users\User\OneDrive\Desktop\test\pos-web\
     ├── icon-192.svg       # App icon
     ├── icon-512.svg       # App icon
     └── js/
-        ├── app.js         # Core: State, API, Login, Modal, Toast, Socket, Navigation
-        ├── menu.js        # Categories + Menu Grid + Menu Admin CRUD
-        ├── orders.js      # POS, Active Orders, Receipt generation
-        ├── tables.js      # Tables (customer view + admin CRUD)
-        ├── employees.js   # Employee management + permissions
-        ├── settings.js    # Restaurant settings (load/save)
-        ├── invoices.js    # Invoice listing, view, edit, delete
-        ├── daily-closing.js # Employee daily closing
-        ├── sales.js       # Sales reports (by date, employee, payment)
-        ├── audit.js       # Audit trail log
-        ├── reports.js     # Daily reports
-        └── admin.js       # Admin panel setup + permission-based visibility
+        ├── core/          # Core: State, API, Login, Auth, UI feedback, Sync
+        ├── features/      # Feature modules (orders, catalog, shifts, settings, reports, attendance)
+        ├── admin.js       # Admin panel setup + permission-based visibility
+        ├── employees.js   # Employee management
+        ├── tables.js      # Tables management
+        ├── invoices.js    # Invoice management
+        ├── dashboard.js   # Dashboard logic
+        ├── audit.js       # Audit logic
+        ├── inventory.js   # Inventory logic
+        └── kds.js         # Kitchen Display System
 ```
 
 ---
@@ -66,8 +64,11 @@ id INTEGER PRIMARY KEY AUTOINCREMENT
 name TEXT NOT NULL              -- Arabic name
 name_en TEXT DEFAULT ''         -- English name
 pin TEXT NOT NULL               -- SHA256 hash of PIN
+username TEXT UNIQUE            -- Login username
+password_hash TEXT              -- Hashed password
 role TEXT DEFAULT 'cashier'     -- admin | cashier | waiter
-permissions TEXT DEFAULT '{}'   -- JSON: {pos, menu, reports, settings, audit, employees, daily_closing, edit_orders, delete_orders, view_invoices}
+permissions TEXT DEFAULT '{}'   -- JSON: {pos, menu, reports, settings, audit, employees, daily_closing, edit_orders, delete_orders, view_invoices, etc.}
+max_discount REAL DEFAULT 100   -- Maximum allowed discount percentage (100 = open)
 active INTEGER DEFAULT 1
 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 ```
