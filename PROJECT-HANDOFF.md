@@ -210,6 +210,46 @@ view_invoices, dashboard
 - لغة الواجهة الافتراضية: العربية.
 - Cloudflare Tunnel أداة مثبتة، لكن رابط Quick Tunnel مؤقت ويتطلب تشغيل الأمر يدويًا عند الحاجة.
 
+## 12. تعديلات الذكاء الاصطناعي (سبتمبر 2026 - الجلسة الثانية)
+
+### أ. نظام حد الخصم للموظف (max_discount)
+
+- **المشكلة:** لم يكن حد الخصم يُطبَّق فعلياً رغم وجود الحقل في الواجهة.
+- **الإصلاح:**
+  - إضافة عمود `max_discount REAL DEFAULT 100` في `src/database/migrations.js`.
+  - حفظ `max_discount` في `src/routes/employees.routes.js` (POST و PUT).
+  - إرجاع `max_discount` في `src/middleware/auth.middleware.js` مع `COALESCE(max_discount, 100)` لضمان أن NULL = 100 (بلا حد).
+  - التحقق من الحد في `src/services/orders.service.js` في `createOrder` و`updateOrder`.
+  - إخفاء حقل الخصم في الواجهة (`public/js/app.js`) إذا لم يملك الموظف صلاحية `discount_orders`.
+  - تحديد `max` لحقل الإدخال بناءً على `max_discount` الموظف.
+- **ملاحظة مهمة:** الموظفون القدامى في DB لديهم `max_discount = NULL`، يُعامَل كـ 100 (بلا حد) بفضل COALESCE.
+
+### ب. إصلاح التدقيق - الفاتورة قبل وبعد التعديل
+
+- **المشكلة:** كانت الفاتورة قبل وبعد التعديل متطابقة في سجل التدقيق.
+- **السبب:** `logAudit` في `updateOrder` كان يمرر `old` و`saved`، لكن `saved = getOrder(id)` يقرأ من DB **بعد** الحفظ، فكلاهما يعكسان البيانات الجديدة.
+- **الإصلاح:** حفظ `oldSnapshot = JSON.parse(JSON.stringify(old))` قبل أي تعديل، وتمريره كـ `old_value` في `logAudit`.
+- **deleteOrder:** كان يمرر `'DELETED'` كـ `newVal`، أصبح يمرر `{}` لتوضيح أن الفاتورة حُذفت.
+- **البنية الحالية لـ audit_log:**
+  - `old_value`: JSON كامل للطلب قبل التعديل (مع `items[]`).
+  - `new_value`: JSON كامل للطلب بعد التعديل، أو `{}` في حالة الحذف.
+
+### ج. إعادة تصميم صفحة التدقيق
+
+- استُبدل الجدول بكروت تدقيق أنيقة في `public/js/audit.js`.
+- كل كرت يعرض: نوع الإجراء بلون مميز، ملخص التغييرات (chips)، الفاتورة قبل وبعد جنباً إلى جنب.
+- للحذف: يُعرض الفاتورة القديمة فقط (لا توجد فاتورة جديدة بعد الحذف).
+- دعم كامل للغتين العربية والإنجليزية.
+- الأنماط CSS مضافة في `public/style.css` تحت تعليق `/* ===== AUDIT CARDS ===== */`.
+- مفاتيح i18n جديدة في `public/i18n.js`: `audit_before`, `audit_after`, `audit_deleted_invoice`, `audit_no_change`.
+
+### د. ملاحظات للمطور التالي
+
+- لا تغيّر بنية `logAudit` في `audit.middleware.js` دون مراجعة كل استدعاءاتها في `orders.service.js` و`employees.routes.js`.
+- عند إضافة إجراء جديد للتدقيق، أضف له في `auditActionMeta()` في `audit.js` مع الترجمتين.
+- `applyDiscountPermissions()` في `app.js` تُستدعى من `initApp()` بعد كل تسجيل دخول - لا تحذفها.
+- إصدارات الكاش الحالية في `index.html`: راجع `sw.js` لرفع `CACHE_NAME` عند تعديل ملفات الواجهة.
+
 ## 11. التحديثات الأخيرة (سبتمبر 2026)
 
 - **ترقية قاعدة البيانات:** تم استبدال مكتبة `sql.js` (التي تعمل في الذاكرة) بمكتبة `better-sqlite3` لكتابة البيانات مباشرة على القرص وتفعيل وضع `WAL`، مما يمنع فقدان البيانات تماماً عند انقطاع الكهرباء.

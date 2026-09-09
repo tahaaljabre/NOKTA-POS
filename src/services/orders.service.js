@@ -93,7 +93,9 @@ function createOrder(input,user) {
     const maxDisc = user.max_discount !== null && user.max_discount !== undefined ? user.max_discount : 100;
     if (disc > maxDisc) throw error(`تجاوزت الحد الأقصى للخصم (${maxDisc}%) / Exceeded max discount`, 403);
     if((disc || amount) && !can(user,'discount_orders')) throw error('صلاحية الخصم مطلوبة / Discount permission required',403);
-    if(user.role!=='admin' && disc>(user.max_discount??100)) throw error(`الخصم يتجاوز الحد المسموح (${user.max_discount??100}%) / Discount exceeds your allowed limit`,403);
+    // max_discount: NULL في DB يُعامل كـ 100 (بلا حد)
+    const maxDiscCreate = user.role==='admin' ? 100 : (user.max_discount !== null && user.max_discount !== undefined ? user.max_discount : 100);
+    if(user.role!=='admin' && disc>maxDiscCreate) throw error(`الخصم يتجاوز الحد المسموح (${maxDiscCreate}%) / Discount exceeds your allowed limit`,403);
     const tax=number(db.prepare("SELECT value FROM settings WHERE key='tax_rate'").get()?.value||0,'tax',0,100);
     const calc=totals(items,disc,amount,tax),method=input.payment_method||'cash',pay=payment(method,status,input.paid_amount,calc.total);
     const tableId=input.table_id?number(input.table_id,'table ID',1):null,customerId=input.customer_id?number(input.customer_id,'customer ID',1):null;
@@ -116,6 +118,8 @@ function createOrder(input,user) {
 function updateOrder(id,input,user) {
   return db.transaction(()=>{
     const old=getOrder(id);
+    // حفظ لقطة كاملة للطلب القديم قبل أي تعديل (للتدقيق)
+    const oldSnapshot=JSON.parse(JSON.stringify(old));
     if(old.is_deleted || old.status==='cancelled') throw error('لا يمكن تعديل طلب محذوف أو ملغي / Cannot edit deleted or cancelled order',409);
     if(!can(user,'edit_orders') && (old.employee_id!==user.id || old.status!=='active')) throw error('صلاحية تعديل الطلب مطلوبة / Order edit permission required',403);
     if(input.version!==undefined && Number(input.version)!==old.version) throw error('تغير الطلب؛ أعد فتحه / Order changed; reopen it',409);
@@ -126,7 +130,9 @@ function updateOrder(id,input,user) {
     const maxDisc = user.max_discount !== null && user.max_discount !== undefined ? user.max_discount : 100;
     if (disc > maxDisc) throw error(`تجاوزت الحد الأقصى للخصم (${maxDisc}%) / Exceeded max discount`, 403);
     if((disc!==old.discount_percent || amount!==old.discount_amount) && !can(user,'discount_orders')) throw error('صلاحية الخصم مطلوبة / Discount permission required',403);
-    if(user.role!=='admin' && disc>(user.max_discount??100)) throw error(`الخصم يتجاوز الحد المسموح (${user.max_discount??100}%) / Discount exceeds your allowed limit`,403);
+    // max_discount: NULL في DB يُعامل كـ 100 (بلا حد)
+    const maxDisc = user.role==='admin' ? 100 : (user.max_discount !== null && user.max_discount !== undefined ? user.max_discount : 100);
+    if(user.role!=='admin' && disc>maxDisc) throw error(`الخصم يتجاوز الحد المسموح (${maxDisc}%) / Discount exceeds your allowed limit`,403);
     const items=input.items===undefined?old.items:normalizeItems(input.items,old.items);
     const calc=totals(items,disc,amount,old.tax_percent),method=input.payment_method??old.payment_method;
     const pay=payment(method,status,input.paid_amount??(old.status==='completed'?Math.max(old.paid_amount,calc.total):undefined),calc.total,old);
@@ -137,17 +143,21 @@ function updateOrder(id,input,user) {
     if(input.items!==undefined) persistItems(id,items);
     if(status!=='active' && old.table_id) db.prepare('UPDATE "tables" SET status=\'empty\',current_order_id=NULL WHERE id=? AND current_order_id=?').run(old.table_id,id);
     const saved=getOrder(id);if(effectsChanged) applyEffects(saved,saved.items,1,user);
-    logAudit(user.id,user.name,status==='cancelled'?'cancel_order':'update_order','orders',id,'Invoice #'+saved.invoice_number,old,saved);
+    // نمرر oldSnapshot (قبل التعديل) و saved (بعد التعديل) للتدقيق
+    logAudit(user.id,user.name,status==='cancelled'?'cancel_order':'update_order','orders',id,'Invoice #'+saved.invoice_number,oldSnapshot,saved);
     return saved;
   })();
 }
 function deleteOrder(id,user) {
   return db.transaction(()=>{
     const old=getOrder(id);if(old.is_deleted)return {ok:true};
+    // حفظ لقطة كاملة قبل الحذف للتدقيق
+    const oldSnapshot=JSON.parse(JSON.stringify(old));
     applyEffects(old,old.items,-1,user);
     db.prepare('UPDATE orders SET is_deleted=1,version=version+1 WHERE id=?').run(id);
     db.prepare('UPDATE "tables" SET status=\'empty\',current_order_id=NULL WHERE current_order_id=?').run(id);
-    logAudit(user.id,user.name,'delete_order','orders',id,'Voided invoice; stock and loyalty reversed',old,'DELETED');return {ok:true};
+    // new_value = {} يدل على أن الفاتورة حُذفت (لا توجد بيانات بعد الحذف)
+    logAudit(user.id,user.name,'delete_order','orders',id,'Voided invoice; stock and loyalty reversed',oldSnapshot,{});return {ok:true};
   })();
 }
 module.exports={createOrder,updateOrder,deleteOrder,getOrder,can,error,number,text,money};
