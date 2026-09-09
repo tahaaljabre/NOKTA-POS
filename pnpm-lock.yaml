@@ -23,15 +23,9 @@ importers:
       escpos:
         specifier: 3.0.0-alpha.6
         version: 3.0.0-alpha.6
-      escpos-bluetooth:
-        specifier: 3.0.0-alpha.2
-        version: 3.0.0-alpha.2
       escpos-network:
         specifier: 3.0.0-alpha.5
         version: 3.0.0-alpha.5
-      escpos-usb:
-        specifier: 3.0.0-alpha.4
-        version: 3.0.0-alpha.4
       express:
         specifier: ^4.18.2
         version: 4.22.2
@@ -48,6 +42,13 @@ importers:
       electron-builder:
         specifier: ^26.0.12
         version: 26.15.3(electron-builder-squirrel-windows@26.15.3)
+    optionalDependencies:
+      escpos-bluetooth:
+        specifier: 3.0.0-alpha.2
+        version: 3.0.0-alpha.2
+      escpos-usb:
+        specifier: 3.0.0-alpha.4
+        version: 3.0.0-alpha.4
 
 packages:
 
@@ -2157,7 +2158,8 @@ snapshots:
 
   '@types/slice-ansi@4.0.0': {}
 
-  '@types/w3c-web-usb@1.0.14': {}
+  '@types/w3c-web-usb@1.0.14':
+    optional: true
 
   '@types/ws@8.18.1':
     dependencies:
@@ -2288,7 +2290,8 @@ snapshots:
 
   big-integer@1.6.52: {}
 
-  bindings@1.2.1: {}
+  bindings@1.2.1:
+    optional: true
 
   bluebird@3.7.2: {}
 
@@ -2685,12 +2688,14 @@ snapshots:
   escpos-bluetooth@3.0.0-alpha.2:
     dependencies:
       node-bluetooth: 1.2.6
+    optional: true
 
   escpos-network@3.0.0-alpha.5: {}
 
   escpos-usb@3.0.0-alpha.4:
     dependencies:
       usb: 3.1.0
+    optional: true
 
   escpos@3.0.0-alpha.6:
     dependencies:
@@ -3159,7 +3164,8 @@ snapshots:
     dependencies:
       tslib: 2.8.1
 
-  nan@2.28.0: {}
+  nan@2.28.0:
+    optional: true
 
   native-run@2.0.3:
     dependencies:
@@ -3203,6 +3209,7 @@ snapshots:
     dependencies:
       bindings: 1.2.1
       nan: 2.28.0
+    optional: true
 
   node-gyp@12.4.0:
     dependencies:
@@ -3771,6 +3778,7 @@ snapshots:
       '@node-usb/usb-win32-arm64-msvc': 3.1.0
       '@node-usb/usb-win32-ia32-msvc': 3.1.0
       '@node-usb/usb-win32-x64-msvc': 3.1.0
+    optional: true
 
   utf8-byte-length@1.0.5: {}
 

@@ -1,6 +1,10 @@
 const escpos = require('escpos');
 escpos.Network = require('escpos-network');
-escpos.USB = require('escpos-usb');
+try {
+  escpos.USB = require('escpos-usb');
+} catch (e) {
+  console.log('USB adapter not available');
+}
 try {
   escpos.Bluetooth = require('escpos-bluetooth');
 } catch (e) {
