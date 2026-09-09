@@ -11,6 +11,7 @@ let categories = [];
 let items = [];
 let tables = [];
 let currentOrder = { items: [], table_id: null, type: 'dine_in', discount: 0, note: '' };
+let currentUserMaxDiscount = 100;
 let activeCategoryId = null;
 let currentUser = null;
 let pinBuffer = '';
@@ -49,6 +50,29 @@ function updateHeaderUser() {
   const menu = document.getElementById('header-tools-user');
   if (main) main.textContent = name;
   if (menu) menu.textContent = name ? `👤 ${escapeHtml(name)}` : '';
+}
+
+function applyDiscountPermissions() {
+  const discountRow = document.querySelector('.discount-row');
+  const discountInput = document.getElementById('discount-input');
+  if (!discountRow || !discountInput) return;
+  const isAdmin = currentUser && currentUser.role === 'admin';
+  const hasDiscountPerm = isAdmin || !!(currentUser && currentUser.permissions && currentUser.permissions.discount_orders);
+  discountRow.style.display = hasDiscountPerm ? '' : 'none';
+  if (hasDiscountPerm) {
+    const maxDisc = isAdmin ? 100 : (currentUserMaxDiscount ?? 100);
+    discountInput.max = maxDisc;
+    discountInput.title = currentLang === 'ar' ? `الحد الأقصى للخصم: ${maxDisc}%` : `Max discount: ${maxDisc}%`;
+    if (parseFloat(discountInput.value) > maxDisc) {
+      discountInput.value = '0';
+      currentOrder.discount = 0;
+      if (typeof updateOrderTotals === 'function') updateOrderTotals();
+    }
+  } else {
+    currentOrder.discount = 0;
+    discountInput.value = '0';
+    if (typeof updateOrderTotals === 'function') updateOrderTotals();
+  }
 }
 
 // ===== Offline IndexedDB =====

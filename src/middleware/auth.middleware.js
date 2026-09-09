@@ -22,7 +22,7 @@ function getRequesterInfo(req) {
   const payload = verifyToken((req.headers.authorization || '').replace(/^Bearer\s+/i, ''));
   if (!payload) return null;
   try {
-    const emp = db.prepare('SELECT id, name, name_en, role, permissions, default_floor, default_station, active, token_rev FROM employees WHERE id=? AND active=1').get(payload.sub);
+    const emp = db.prepare('SELECT id, name, name_en, role, permissions, default_floor, default_station, active, token_rev, max_discount FROM employees WHERE id=? AND active=1').get(payload.sub);
     if (!emp || emp.token_rev !== payload.rev) return null;
     emp.permissions = typeof emp.permissions === 'string' ? JSON.parse(emp.permissions || '{}') : (emp.permissions || {});
     return emp;

@@ -28,7 +28,7 @@ router.get('/', (req, res) => {
   if (!requester) return res.status(401).json({ error: 'Unauthorized' });
 
   if (requester.role === 'admin' || requester.permissions.employees) {
-    const rows = db.prepare('SELECT id, name, name_en, username, role, permissions, phone, default_floor, default_station, active, created_at FROM employees ORDER BY id').all();
+    const rows = db.prepare('SELECT id, name, name_en, username, role, permissions, phone, default_floor, default_station, active, max_discount, created_at FROM employees ORDER BY id').all();
     rows.forEach(r => {
       r.permissions = typeof r.permissions === 'string' ? JSON.parse(r.permissions || '{}') : (r.permissions || {});
     });
@@ -50,9 +50,10 @@ router.post('/', requireAdmin, (req, res) => {
 
   const floorVal = parseInt(default_floor) || 1;
   const stationVal = default_station || (role === 'waiter' ? 'waiter_mobile' : `cashier_floor${floorVal}`);
+  const maxDiscountNew = Math.min(100, Math.max(0, parseFloat(req.body.max_discount) || 100));
 
-  const info = db.prepare('INSERT INTO employees (name, name_en, pin, username, password_hash, role, permissions, phone, default_floor, default_station) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').run(
-    name, name_en || '', hashPin(pin), cleanUsername, password ? hashPin(password) : null, role || 'cashier', JSON.stringify(permissions || { pos: true }), phone || '', floorVal, stationVal
+  const info = db.prepare('INSERT INTO employees (name, name_en, pin, username, password_hash, role, permissions, phone, default_floor, default_station, max_discount) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').run(
+    name, name_en || '', hashPin(pin), cleanUsername, password ? hashPin(password) : null, role || 'cashier', JSON.stringify(permissions || { pos: true }), phone || '', floorVal, stationVal, maxDiscountNew
   );
   logAudit(req.currentUser.id, req.currentUser.name, 'create', 'employee', info.lastInsertRowid, `Created Employee: ${name} (${role}) - Floor ${floorVal}`);
   res.json({ id: info.lastInsertRowid });
@@ -60,12 +61,13 @@ router.post('/', requireAdmin, (req, res) => {
 
 router.put('/:id', requireAdmin, (req, res) => {
   const { name, name_en, pin, username, password, role, permissions, phone, default_floor, default_station, active } = req.body;
-  const before = db.prepare('SELECT id,name,name_en,username,role,permissions,phone,default_floor,default_station,active FROM employees WHERE id=?').get(req.params.id);
+  const before = db.prepare('SELECT id,name,name_en,username,role,permissions,phone,default_floor,default_station,active,max_discount FROM employees WHERE id=?').get(req.params.id);
   if (!before) return res.status(404).json({ error: 'Employee not found' });
   const floorVal = default_floor !== undefined ? parseInt(default_floor) : undefined;
   const cleanUsername = username === undefined ? undefined : (username ? String(username).trim().toLowerCase() : null);
   if (cleanUsername && !/^[a-z0-9._-]{3,32}$/.test(cleanUsername)) return res.status(400).json({ error: 'Invalid username' });
   if (password && (typeof password !== 'string' || password.length < 6)) return res.status(400).json({ error: 'Password must contain at least 6 characters' });
+  const maxDiscountUpd = req.body.max_discount !== undefined ? Math.min(100, Math.max(0, parseFloat(req.body.max_discount) || 0)) : undefined;
   if (pin) {
     db.prepare(`
       UPDATE employees 
@@ -79,28 +81,30 @@ router.put('/:id', requireAdmin, (req, res) => {
           phone=COALESCE(?, phone),
           default_floor=COALESCE(?, default_floor),
           default_station=COALESCE(?, default_station),
-          active=COALESCE(?, active) 
+          active=COALESCE(?, active),
+          max_discount=COALESCE(?, max_discount)
       WHERE id=?
-    `).run(name, name_en, hashPin(pin), cleanUsername, password ? hashPin(password) : null, role, permissions ? JSON.stringify(permissions) : null, phone, floorVal, default_station, active, req.params.id);
+    `).run(name, name_en, hashPin(pin), cleanUsername, password ? hashPin(password) : null, role, permissions ? JSON.stringify(permissions) : null, phone, floorVal, default_station, active, maxDiscountUpd, req.params.id);
   } else {
     db.prepare(`
       UPDATE employees 
       SET token_rev=token_rev+1, name=COALESCE(?, name),
           name_en=COALESCE(?, name_en), 
-      username=COALESCE(?, username),
-      password_hash=COALESCE(?, password_hash),
+          username=COALESCE(?, username),
+          password_hash=COALESCE(?, password_hash),
           role=COALESCE(?, role), 
           permissions=COALESCE(?, permissions), 
           phone=COALESCE(?, phone),
           default_floor=COALESCE(?, default_floor),
           default_station=COALESCE(?, default_station),
-          active=COALESCE(?, active) 
+          active=COALESCE(?, active),
+          max_discount=COALESCE(?, max_discount)
       WHERE id=?
-    `).run(name, name_en, cleanUsername, password ? hashPin(password) : null, role, permissions ? JSON.stringify(permissions) : null, phone, floorVal, default_station, active, req.params.id);
+    `).run(name, name_en, cleanUsername, password ? hashPin(password) : null, role, permissions ? JSON.stringify(permissions) : null, phone, floorVal, default_station, active, maxDiscountUpd, req.params.id);
   }
 
   require('../socket/socket.handler').revokeUser(req.params.id);
-  const after = db.prepare('SELECT id,name,name_en,username,role,permissions,phone,default_floor,default_station,active FROM employees WHERE id=?').get(req.params.id);
+  const after = db.prepare('SELECT id,name,name_en,username,role,permissions,phone,default_floor,default_station,active,max_discount FROM employees WHERE id=?').get(req.params.id);
   logAudit(req.currentUser.id, req.currentUser.name, 'update', 'employee', req.params.id, `Updated Employee: ${name || req.params.id}`, before, after);
   res.json({ ok: true });
 });
