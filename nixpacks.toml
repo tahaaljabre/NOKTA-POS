@@ -1,2 +1,2 @@
 [phases.setup]
-aptPkgs = ["...", "libbluetooth-dev"]
+aptPkgs = ["libbluetooth-dev", "libudev-dev", "build-essential", "pkg-config", "python3"]
