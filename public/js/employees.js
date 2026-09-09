@@ -61,6 +61,8 @@ async function openEmployeeModal(empId = null) {
     <label>${t('emp_username')}</label><input type="text" id="modal-emp-username" value="${escapeHtml(emp && emp.username ? emp.username : '')}" autocomplete="username" placeholder="${t('emp_username_hint')}">
     <label>${t('emp_password')}${emp ? ' (' + t('emp_password_keep') + ')' : ''}</label><input type="password" id="modal-emp-password" autocomplete="new-password" placeholder="${t('emp_password_hint')}">
     <label>${t('emp_pin')}${emp ? ' (' + (currentLang === 'ar' ? 'اترك فارغ للاحتفاظ بالقديم' : 'leave empty to keep') + ')' : ''}</label><input type="password" id="modal-emp-pin" maxlength="6" placeholder="${t('emp_pin_hint')}">
+    <label>${currentLang === 'ar' ? 'أقصى نسبة خصم (%)' : 'Max Discount (%)'}</label>
+    <input type="number" id="modal-emp-max-discount" min="0" max="100" value="${emp && emp.max_discount !== undefined ? emp.max_discount : 100}">
     <label>${t('emp_role')}</label>
     <select id="modal-emp-role" onchange="toggleEmployeeFloorFields(this.value)">
       <option value="admin" ${emp && emp.role === 'admin' ? 'selected' : ''}>${t('emp_role_admin')}</option>
@@ -112,6 +114,7 @@ async function openEmployeeModal(empId = null) {
       role: document.getElementById('modal-emp-role').value,
       default_floor: parseInt(document.getElementById('modal-emp-floor').value) || 1,
       default_station: document.getElementById('modal-emp-station').value,
+      max_discount: parseFloat(document.getElementById('modal-emp-max-discount').value) || 100,
         permissions: {
           kitchen: document.getElementById("perm-kitchen").checked,
           discount_orders: document.getElementById("perm-discount-orders").checked,
