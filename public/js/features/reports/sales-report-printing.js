@@ -256,6 +256,11 @@ async function printSalesReport() {
       <div class="kpi-sub">${currentLang === 'ar' ? 'صافي المبيعات المحققة' : 'Net Sales'}</div>
     </div>
     <div class="kpi-card">
+      <div class="kpi-label">${currentLang === 'ar' ? 'الضريبة المحصلة' : 'Total Tax'} ${report.totals?.tax_rate ? `(${report.totals.tax_rate}%)` : ''}</div>
+      <div class="kpi-value">${(report.totals?.total_tax || 0).toFixed(2)} ${escapeHtml(currency)}</div>
+      <div class="kpi-sub">${currentLang === 'ar' ? 'إجمالي الضرائب' : 'Tax Total'}</div>
+    </div>
+    <div class="kpi-card">
       <div class="kpi-label">${currentLang === 'ar' ? 'عدد الطلبات المكتملة' : 'Completed Orders'}</div>
       <div class="kpi-value">${totalOrders}</div>
       <div class="kpi-sub">${currentLang === 'ar' ? 'إجمالي الفواتير' : 'Invoices Count'}</div>
@@ -266,6 +271,34 @@ async function printSalesReport() {
       <div class="kpi-sub">${currentLang === 'ar' ? 'معدل الإنفاق لكل طلب' : 'Avg Spend per Order'}</div>
     </div>
   </div>
+
+  <!-- Order Types Breakdown Table -->
+  ${report.by_type && report.by_type.length > 0 ? `
+    <div class="section-title">
+      <span>🍽️ ${currentLang === 'ar' ? 'المبيعات حسب نوع الطلب' : 'Sales by Order Type'}</span>
+    </div>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>${currentLang === 'ar' ? 'نوع الطلب' : 'Order Type'}</th>
+          <th>${currentLang === 'ar' ? 'عدد الطلبات' : 'Orders'}</th>
+          <th style="text-align:${currentLang === 'ar' ? 'left' : 'right'};">${currentLang === 'ar' ? 'الإجمالي' : 'Total Amount'}</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${report.by_type.map(t => {
+          const names = { dine_in: currentLang === 'ar' ? 'محلي' : 'Dine In', takeaway: currentLang === 'ar' ? 'سفري' : 'Takeaway', delivery: currentLang === 'ar' ? 'توصيل' : 'Delivery' };
+          return `
+            <tr>
+              <td><strong>${escapeHtml(names[t.type] || t.type)}</strong></td>
+              <td>${t.count}</td>
+              <td style="text-align:${currentLang === 'ar' ? 'left' : 'right'}; font-weight:700;">${(t.total || 0).toFixed(2)} ${escapeHtml(currency)}</td>
+            </tr>
+          `;
+        }).join('')}
+      </tbody>
+    </table>
+  ` : ''}
 
   <!-- Payment Methods Breakdown Table -->
   ${report.by_payment && report.by_payment.length > 0 ? `

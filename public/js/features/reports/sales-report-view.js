@@ -42,12 +42,33 @@ async function loadSalesReport() {
         <span class="stat-value">${(report.totals?.total_revenue || 0).toFixed(2)} ${escapeHtml(currency)}</span>
       </div>
       <div class="report-stat">
+        <span>${currentLang === 'ar' ? 'الضريبة المحصلة' : 'Total Tax'} ${report.totals?.tax_rate ? `(${report.totals.tax_rate}%)` : ''}</span>
+        <span class="stat-value">${(report.totals?.total_tax || 0).toFixed(2)} ${escapeHtml(currency)}</span>
+      </div>
+      <div class="report-stat">
         <span>${currentLang === 'ar' ? 'متوسط قيمة الطلب' : 'Average Order'}</span>
         <span class="stat-value">
           ${report.totals?.total_orders > 0 ? ((report.totals?.total_revenue || 0) / report.totals?.total_orders).toFixed(2) : '0.00'} ${escapeHtml(currency)}
         </span>
       </div>
     </div>
+
+    ${report.by_type && report.by_type.length > 0 ? `
+      <h3 style="margin-top:18px; margin-bottom:10px; color:var(--primary); font-size:15px;">
+        ${currentLang === 'ar' ? 'المبيعات حسب نوع الطلب' : 'Sales by Order Type'}
+      </h3>
+      <div class="closing-stats">
+        ${report.by_type.map(t => {
+          const typeLabels = { dine_in: currentLang === 'ar' ? '🍽️ محلي' : '🍽️ Dine In', takeaway: currentLang === 'ar' ? '🛍️ سفري' : '🛍️ Takeaway', delivery: currentLang === 'ar' ? '🛵 توصيل' : '🛵 Delivery' };
+          return `
+            <div class="report-stat">
+              <span>${escapeHtml(typeLabels[t.type] || t.type)}</span>
+              <span class="stat-value">${t.count} ${currentLang === 'ar' ? 'طلبات' : 'orders'} - ${(t.total || 0).toFixed(2)} ${escapeHtml(currency)}</span>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    ` : ''}
 
     ${report.daily && report.daily.length > 0 ? `
       <h3 style="margin-top:18px; margin-bottom:10px; color:var(--primary); font-size:15px;">
@@ -59,12 +80,14 @@ async function loadSalesReport() {
             <th>${currentLang === 'ar' ? 'التاريخ' : 'Date'}</th>
             <th>${currentLang === 'ar' ? 'عدد الطلبات' : 'Orders'}</th>
             <th>${currentLang === 'ar' ? 'الإيراد' : 'Revenue'}</th>
+            <th>${currentLang === 'ar' ? 'الضريبة' : 'Tax'}</th>
           </tr></thead>
           <tbody>${report.daily.map(d => `
             <tr>
               <td><strong>${d.day}</strong></td>
               <td>${d.orders}</td>
               <td><strong style="color:var(--gold-hover);">${(d.revenue || 0).toFixed(2)} ${escapeHtml(currency)}</strong></td>
+              <td><span style="color:#777;">${(d.tax || 0).toFixed(2)} ${escapeHtml(currency)}</span></td>
             </tr>
           `).join('')}</tbody>
         </table>
