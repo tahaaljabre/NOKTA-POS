@@ -93,6 +93,7 @@ function createOrder(input,user) {
     const maxDisc = user.max_discount !== null && user.max_discount !== undefined ? user.max_discount : 100;
     if (disc > maxDisc) throw error(`تجاوزت الحد الأقصى للخصم (${maxDisc}%) / Exceeded max discount`, 403);
     if((disc || amount) && !can(user,'discount_orders')) throw error('صلاحية الخصم مطلوبة / Discount permission required',403);
+    if(user.role!=='admin' && disc>(user.max_discount??100)) throw error(`الخصم يتجاوز الحد المسموح (${user.max_discount??100}%) / Discount exceeds your allowed limit`,403);
     const tax=number(db.prepare("SELECT value FROM settings WHERE key='tax_rate'").get()?.value||0,'tax',0,100);
     const calc=totals(items,disc,amount,tax),method=input.payment_method||'cash',pay=payment(method,status,input.paid_amount,calc.total);
     const tableId=input.table_id?number(input.table_id,'table ID',1):null,customerId=input.customer_id?number(input.customer_id,'customer ID',1):null;
@@ -125,6 +126,7 @@ function updateOrder(id,input,user) {
     const maxDisc = user.max_discount !== null && user.max_discount !== undefined ? user.max_discount : 100;
     if (disc > maxDisc) throw error(`تجاوزت الحد الأقصى للخصم (${maxDisc}%) / Exceeded max discount`, 403);
     if((disc!==old.discount_percent || amount!==old.discount_amount) && !can(user,'discount_orders')) throw error('صلاحية الخصم مطلوبة / Discount permission required',403);
+    if(user.role!=='admin' && disc>(user.max_discount??100)) throw error(`الخصم يتجاوز الحد المسموح (${user.max_discount??100}%) / Discount exceeds your allowed limit`,403);
     const items=input.items===undefined?old.items:normalizeItems(input.items,old.items);
     const calc=totals(items,disc,amount,old.tax_percent),method=input.payment_method??old.payment_method;
     const pay=payment(method,status,input.paid_amount??(old.status==='completed'?Math.max(old.paid_amount,calc.total):undefined),calc.total,old);

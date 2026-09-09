@@ -495,22 +495,7 @@
               <input type="date" id="audit-date-filter">
               <button class="btn" id="btn-load-audit" onclick="loadAuditAdmin()" data-i18n="load">عرض</button>
             </div>
-            <div class="audit-table-wrapper">
-              <table class="admin-table" id="audit-table">
-                <thead>
-                  <tr>
-                    <th data-i18n="th_time">الوقت</th>
-                    <th data-i18n="th_employee">الموظف</th>
-                    <th data-i18n="th_action">الإجراء</th>
-                    <th data-i18n="th_details">التفاصيل</th>
-                    <th>قبل التعديل (Before)</th>
-                    <th>بعد التعديل (After)</th>
-                    <th>معاينة وطباعة</th>
-                  </tr>
-                </thead>
-                <tbody></tbody>
-              </table>
-            </div>
+            <div id="audit-cards-container" class="audit-cards-container"></div>
           </div>
           <div id="admin-settings-admin" class="admin-panel">
             <h2 data-i18n="admin_settings">الإعدادات</h2>

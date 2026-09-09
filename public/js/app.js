@@ -11,6 +11,7 @@ let categories = [];
 let items = [];
 let tables = [];
 let currentOrder = { items: [], table_id: null, type: 'dine_in', discount: 0, note: '' };
+let currentUserMaxDiscount = 100;
 let activeCategoryId = null;
 let currentUser = null;
 let pinBuffer = '';
@@ -49,6 +50,29 @@ function updateHeaderUser() {
   const menu = document.getElementById('header-tools-user');
   if (main) main.textContent = name;
   if (menu) menu.textContent = name ? `👤 ${escapeHtml(name)}` : '';
+}
+
+function applyDiscountPermissions() {
+  const discountRow = document.querySelector('.discount-row');
+  const discountInput = document.getElementById('discount-input');
+  if (!discountRow || !discountInput) return;
+  const isAdmin = currentUser && currentUser.role === 'admin';
+  const hasDiscountPerm = isAdmin || !!(currentUser && currentUser.permissions && currentUser.permissions.discount_orders);
+  discountRow.style.display = hasDiscountPerm ? '' : 'none';
+  if (hasDiscountPerm) {
+    const maxDisc = isAdmin ? 100 : (currentUserMaxDiscount ?? 100);
+    discountInput.max = maxDisc;
+    discountInput.title = currentLang === 'ar' ? `الحد الأقصى للخصم: ${maxDisc}%` : `Max discount: ${maxDisc}%`;
+    if (parseFloat(discountInput.value) > maxDisc) {
+      discountInput.value = '0';
+      currentOrder.discount = 0;
+      if (typeof updateOrderTotals === 'function') updateOrderTotals();
+    }
+  } else {
+    currentOrder.discount = 0;
+    discountInput.value = '0';
+    if (typeof updateOrderTotals === 'function') updateOrderTotals();
+  }
 }
 
 // ===== Offline IndexedDB =====
@@ -378,6 +402,7 @@ async function attemptLogin() {
       const stationSel = document.getElementById('pos-station-select');
       if (stationSel) stationSel.value = autoStation;
 
+      currentUserMaxDiscount = typeof data.max_discount === 'number' ? data.max_discount : 100;
       toast(currentLang === 'ar' ? `مرحباً ${escapeHtml(data.name)} (${roleText} - ${floorText})` : `Welcome ${escapeHtml(data.name)} (${roleText} - ${floorText})`, 'success');
 
       loginError.textContent = '';
@@ -407,6 +432,7 @@ async function attemptPasswordLogin(username, password) {
     const data = await res.json();
     if (!res.ok || !data.id) throw new Error(data.error || t('login_error'));
     currentUser = data;
+    currentUserMaxDiscount = typeof data.max_discount === 'number' ? data.max_discount : 100;
     localStorage.setItem('pos_kitchen_token', data.token || '');
     socket.auth = { token: data.token }; socket.connect();
     document.getElementById('login-screen').classList.add('hidden');
@@ -426,6 +452,7 @@ function initApp() {
   setupAdmin();
   applyTranslations();
   checkPermissions();
+  applyDiscountPermissions();
   if (typeof switchMobilePosTab === 'function') {
     switchMobilePosTab('menu');
   }

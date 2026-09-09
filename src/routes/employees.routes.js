@@ -51,11 +51,10 @@ router.post('/', requireAdmin, (req, res) => {
 
   const floorVal = parseInt(default_floor) || 1;
   const stationVal = default_station || (role === 'waiter' ? 'waiter_mobile' : `cashier_floor${floorVal}`);
-
-  const maxDiscVal = max_discount !== undefined ? parseFloat(max_discount) : 100;
+  const maxDiscountNew = Math.min(100, Math.max(0, parseFloat(req.body.max_discount) || 100));
 
   const info = db.prepare('INSERT INTO employees (name, name_en, pin, username, password_hash, role, permissions, phone, default_floor, default_station, max_discount) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').run(
-    name, name_en || '', hashPin(pin), cleanUsername, password ? hashPin(password) : null, role || 'cashier', JSON.stringify(permissions || { pos: true }), phone || '', floorVal, stationVal, maxDiscVal
+    name, name_en || '', hashPin(pin), cleanUsername, password ? hashPin(password) : null, role || 'cashier', JSON.stringify(permissions || { pos: true }), phone || '', floorVal, stationVal, maxDiscountNew
   );
   logAudit(req.currentUser.id, req.currentUser.name, 'create', 'employee', info.lastInsertRowid, `Created Employee: ${name} (${role}) - Floor ${floorVal}`);
   res.json({ id: info.lastInsertRowid });
@@ -69,6 +68,7 @@ router.put('/:id', requireAdmin, (req, res) => {
   const cleanUsername = username === undefined ? undefined : (username ? String(username).trim().toLowerCase() : null);
   if (cleanUsername && !/^[a-z0-9._-]{3,32}$/.test(cleanUsername)) return res.status(400).json({ error: 'Invalid username' });
   if (password && (typeof password !== 'string' || password.length < 6)) return res.status(400).json({ error: 'Password must contain at least 6 characters' });
+  const maxDiscountUpd = req.body.max_discount !== undefined ? Math.min(100, Math.max(0, parseFloat(req.body.max_discount) || 0)) : undefined;
   if (pin) {
     db.prepare(`
       UPDATE employees 
@@ -85,14 +85,14 @@ router.put('/:id', requireAdmin, (req, res) => {
           active=COALESCE(?, active),
           max_discount=COALESCE(?, max_discount)
       WHERE id=?
-    `).run(name, name_en, hashPin(pin), cleanUsername, password ? hashPin(password) : null, role, permissions ? JSON.stringify(permissions) : null, phone, floorVal, default_station, active, max_discount !== undefined ? parseFloat(max_discount) : undefined, req.params.id);
+    `).run(name, name_en, hashPin(pin), cleanUsername, password ? hashPin(password) : null, role, permissions ? JSON.stringify(permissions) : null, phone, floorVal, default_station, active, maxDiscountUpd, req.params.id);
   } else {
     db.prepare(`
       UPDATE employees 
       SET token_rev=token_rev+1, name=COALESCE(?, name),
           name_en=COALESCE(?, name_en), 
-      username=COALESCE(?, username),
-      password_hash=COALESCE(?, password_hash),
+          username=COALESCE(?, username),
+          password_hash=COALESCE(?, password_hash),
           role=COALESCE(?, role), 
           permissions=COALESCE(?, permissions), 
           phone=COALESCE(?, phone),
@@ -101,7 +101,7 @@ router.put('/:id', requireAdmin, (req, res) => {
           active=COALESCE(?, active),
           max_discount=COALESCE(?, max_discount)
       WHERE id=?
-    `).run(name, name_en, cleanUsername, password ? hashPin(password) : null, role, permissions ? JSON.stringify(permissions) : null, phone, floorVal, default_station, active, max_discount !== undefined ? parseFloat(max_discount) : undefined, req.params.id);
+    `).run(name, name_en, cleanUsername, password ? hashPin(password) : null, role, permissions ? JSON.stringify(permissions) : null, phone, floorVal, default_station, active, maxDiscountUpd, req.params.id);
   }
 
   require('../socket/socket.handler').revokeUser(req.params.id);

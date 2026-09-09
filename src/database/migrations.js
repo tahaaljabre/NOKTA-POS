@@ -68,6 +68,7 @@ function runMigrations(db) {
     ['employees', 'default_floor', "INTEGER DEFAULT 1"],
     ['employees', 'default_station', "TEXT DEFAULT 'cashier_floor1'"],
     ['employees', 'attributes', "TEXT DEFAULT '{}'"],
+    ['employees', 'max_discount', 'REAL DEFAULT 100'],
 
     // Tables
     ['tables', 'zone_id', 'INTEGER'],
