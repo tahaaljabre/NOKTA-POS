@@ -58,19 +58,30 @@ function applyDiscountPermissions() {
   if (!discountRow || !discountInput) return;
   const isAdmin = currentUser && currentUser.role === 'admin';
   const hasDiscountPerm = isAdmin || !!(currentUser && currentUser.permissions && currentUser.permissions.discount_orders);
+  // مصدر الحقيقة الوحيد: currentUser.max_discount القادم من الخادم عند تسجيل الدخول
+  const maxDisc = isAdmin ? 100 : (currentUser && currentUser.max_discount !== null && currentUser.max_discount !== undefined ? Number(currentUser.max_discount) : 100);
   discountRow.style.display = hasDiscountPerm ? '' : 'none';
   if (hasDiscountPerm) {
-    const maxDisc = isAdmin ? 100 : (currentUserMaxDiscount ?? 100);
     discountInput.max = maxDisc;
+    discountInput.min = '0';
     discountInput.title = currentLang === 'ar' ? `الحد الأقصى للخصم: ${maxDisc}%` : `Max discount: ${maxDisc}%`;
     if (parseFloat(discountInput.value) > maxDisc) {
-      discountInput.value = '0';
-      currentOrder.discount = 0;
+      discountInput.value = String(maxDisc);
+      currentOrder.discount = maxDisc;
       if (typeof updateOrderTotals === 'function') updateOrderTotals();
     }
+    // منع التجاوز عند كل ضغطة مفتاح
+    discountInput.oninput = (e) => {
+      let val = parseFloat(e.target.value) || 0;
+      if (val > maxDisc) { val = maxDisc; e.target.value = String(maxDisc); }
+      if (val < 0) { val = 0; e.target.value = '0'; }
+      currentOrder.discount = val;
+      if (typeof updateOrderTotals === 'function') updateOrderTotals();
+    };
   } else {
     currentOrder.discount = 0;
     discountInput.value = '0';
+    discountInput.oninput = null;
     if (typeof updateOrderTotals === 'function') updateOrderTotals();
   }
 }
