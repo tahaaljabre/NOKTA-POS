@@ -90,6 +90,8 @@ function createOrder(input,user) {
     const items=normalizeItems(input.items),status=input.status||'active',type=input.type||'dine_in';
     if(!['active','completed'].includes(status) || !['dine_in','takeaway','delivery'].includes(type)) throw error('حالة أو نوع الطلب غير صالح / Invalid order state or type');
     const disc=number(input.discount_percent??0,'discount',0,100),amount=money(number(input.discount_amount??0,'discount amount'));
+    const maxDisc = user.max_discount !== null && user.max_discount !== undefined ? user.max_discount : 100;
+    if (disc > maxDisc) throw error(`تجاوزت الحد الأقصى للخصم (${maxDisc}%) / Exceeded max discount`, 403);
     if((disc || amount) && !can(user,'discount_orders')) throw error('صلاحية الخصم مطلوبة / Discount permission required',403);
     const tax=number(db.prepare("SELECT value FROM settings WHERE key='tax_rate'").get()?.value||0,'tax',0,100);
     const calc=totals(items,disc,amount,tax),method=input.payment_method||'cash',pay=payment(method,status,input.paid_amount,calc.total);
@@ -120,6 +122,8 @@ function updateOrder(id,input,user) {
     if(!['active','completed','cancelled'].includes(status) || (old.status==='completed' && status==='active')) throw error('انتقال حالة غير صالح / Invalid state transition');
     if(status==='cancelled' && !can(user,'cancel_orders') && !can(user,'delete_orders')) throw error('صلاحية الإلغاء مطلوبة / Cancellation permission required',403);
     const disc=number(input.discount_percent??old.discount_percent,'discount',0,100),amount=money(number(input.discount_amount??old.discount_amount,'discount amount'));
+    const maxDisc = user.max_discount !== null && user.max_discount !== undefined ? user.max_discount : 100;
+    if (disc > maxDisc) throw error(`تجاوزت الحد الأقصى للخصم (${maxDisc}%) / Exceeded max discount`, 403);
     if((disc!==old.discount_percent || amount!==old.discount_amount) && !can(user,'discount_orders')) throw error('صلاحية الخصم مطلوبة / Discount permission required',403);
     const items=input.items===undefined?old.items:normalizeItems(input.items,old.items);
     const calc=totals(items,disc,amount,old.tax_percent),method=input.payment_method??old.payment_method;

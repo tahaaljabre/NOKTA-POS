@@ -114,7 +114,7 @@ async function openEmployeeModal(empId = null) {
       role: document.getElementById('modal-emp-role').value,
       default_floor: parseInt(document.getElementById('modal-emp-floor').value) || 1,
       default_station: document.getElementById('modal-emp-station').value,
-      max_discount: parseFloat(document.getElementById('modal-emp-max-discount').value) || 100,
+      max_discount: document.getElementById('modal-emp-max-discount').value !== '' ? parseFloat(document.getElementById('modal-emp-max-discount').value) : 100,
         permissions: {
           kitchen: document.getElementById("perm-kitchen").checked,
           discount_orders: document.getElementById("perm-discount-orders").checked,

@@ -445,6 +445,10 @@ function checkPermissions() {
     if (view === 'dashboard' && !isAdmin && !p.dashboard && !p.reports) show = false;
     btn.style.display = show ? '' : 'none';
   });
+  const discountRows = document.querySelectorAll('.discount-row');
+  discountRows.forEach(row => {
+    row.style.display = (isAdmin || p.discount_orders) ? 'flex' : 'none';
+  });
 
   // Admin Sidebar Tabs
   document.querySelectorAll('.admin-tab').forEach(tab => {

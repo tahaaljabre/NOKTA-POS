@@ -21,7 +21,17 @@ function setupPOS() {
   }
 
   const discountInput = document.getElementById('discount-input');
-  if (discountInput) discountInput.oninput = e => { currentOrder.discount = parseFloat(e.target.value) || 0; updateOrderTotals(); };
+  if (discountInput) discountInput.oninput = e => { 
+    let val = parseFloat(e.target.value) || 0;
+    const maxDisc = currentUser && currentUser.max_discount !== undefined && currentUser.max_discount !== null ? currentUser.max_discount : 100;
+    if (val > maxDisc) {
+      val = maxDisc;
+      e.target.value = val;
+      showToast(t('max_discount_reached', 'تم تجاوز الحد الأقصى للخصم المسموح لك') + ': ' + maxDisc + '%', 'warning');
+    }
+    currentOrder.discount = val; 
+    updateOrderTotals(); 
+  };
   const orderNote = document.getElementById('order-note');
   if (orderNote) orderNote.oninput = e => { currentOrder.note = e.target.value; };
   
@@ -649,11 +659,11 @@ async function generateReceipt(order, targetPrinterType = 'cashier') {
     ${order.discount_percent > 0 ? `
       <div class="total-row">
         <span>${t('subtotal')}</span>
-        <span>${((order.total || 0) / (1 - order.discount_percent/100)).toFixed(2)} ${escapeHtml(currency)}</span>
+        <span>${(order.subtotal || ((order.items || []).reduce((sum, item) => sum + (item.price * item.quantity), 0))).toFixed(2)} ${escapeHtml(currency)}</span>
       </div>
       <div class="total-row">
         <span>${t('discount')} (${order.discount_percent}%)</span>
-        <span>-${(((order.total || 0) / (1 - order.discount_percent/100)) * (order.discount_percent/100)).toFixed(2)} ${escapeHtml(currency)}</span>
+        <span>-${((order.subtotal || ((order.items || []).reduce((sum, item) => sum + (item.price * item.quantity), 0))) * (order.discount_percent/100)).toFixed(2)} ${escapeHtml(currency)}</span>
       </div>
     ` : ''}
     

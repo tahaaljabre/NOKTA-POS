@@ -28,6 +28,7 @@ router.post('/login', (req, res) => {
     phone: emp.phone || '',
     default_floor: emp.default_floor || (emp.role === 'waiter' ? 1 : 1),
     default_station: emp.default_station || (emp.role === 'waiter' ? 'waiter_mobile' : 'cashier_floor1'),
+    max_discount: emp.max_discount !== null && emp.max_discount !== undefined ? emp.max_discount : 100,
     permissions: typeof emp.permissions === 'string' ? JSON.parse(emp.permissions || '{}') : (emp.permissions || {}),
     token: issueToken(emp)
   });

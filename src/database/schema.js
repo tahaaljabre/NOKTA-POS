@@ -12,6 +12,7 @@ const schemaQueries = [
     permissions TEXT DEFAULT '{}',
     phone TEXT DEFAULT '',
     active INTEGER DEFAULT 1,
+    max_discount REAL DEFAULT 100,
     attributes TEXT DEFAULT '{}',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )`,
