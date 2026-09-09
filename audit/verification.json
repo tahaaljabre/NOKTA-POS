@@ -1,5 +1,5 @@
 {
-  "date": "2026-09-09T17:29:41.956Z",
+  "date": "2026-09-09T17:35:49.209Z",
   "results": [
     {
       "file": "01-sql.cjs",
@@ -94,7 +94,7 @@
     {
       "file": "19-tls.cjs",
       "passed": true,
-      "output": "\n========================================\n  🍽️ POS Server: https://127.0.0.1:62401\n  🔐 Initial setup: create the administrator account in the browser\n  📱 Responsive Multi-device Architecture\n========================================\n\nPASS 19: actual HTTPS server, verified test CA and API response\n"
+      "output": "\n========================================\n  🍽️ POS Server: https://127.0.0.1:55359\n  🔐 Initial setup: create the administrator account in the browser\n  📱 Responsive Multi-device Architecture\n========================================\n\nPASS 19: actual HTTPS server, verified test CA and API response\n"
     },
     {
       "file": "20-translations.cjs",

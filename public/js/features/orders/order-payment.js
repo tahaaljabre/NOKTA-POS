@@ -139,7 +139,7 @@ async function openPayOrderModal(orderId) {
           version: order.version,
           status: 'completed',
           payment_method: selectedMethod,
-          tax_percent: taxRate, // Provide current tax rate to backend
+          tax_percent: (order.tax_percent !== undefined ? order.tax_percent : (window.settings?.tax_rate || 0)), // Provide current tax rate to backend
           total: finalTotal,
           paid_amount: cashPaid,
           change_amount: changeDue,
