@@ -26,7 +26,9 @@ router.put('/', requirePermission('settings'), (req, res) => {
     'business_timezone','receipt_header','receipt_footer','receipt_header_en','receipt_footer_en',
     'payment_methods_list','delivery_methods_list','default_payment_method',
     'printer_ip','printer_port','thermal_printer_enabled','kitchen_printer_enabled',
-    'table_mode','order_mode','language'
+    'table_mode','order_mode','language',
+    'tax_type', 'tax_number', 'restaurant_name', 'restaurant_name_en',
+    'restaurant_address', 'restaurant_phone', 'invoice_retention_days', 'printers_config'
   ]);
   const filteredBody = {};
   for (const [k, v] of Object.entries(body)) {

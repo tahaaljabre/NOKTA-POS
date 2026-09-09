@@ -48,11 +48,19 @@ function normalizeItems(input,oldItems=[]) {
     return {item_id:product.id,quantity,note:text(row.note),price:(Math.round(number(product.price,'price')*100)+extra)/100,cost_price:product.cost_price||0,discount_amount:0,selected_modifiers:JSON.stringify(mods.map(m=>({id:m.id,name:m.name,name_en:m.name_en,price_extra:m.price_extra})))};
   });
 }
-function totals(items,percent,amount,tax) {
+function totals(items,percent,amount,tax,taxType) {
   const subtotal=money(items.reduce((sum,i)=>sum+Math.round(i.price*100)*i.quantity,0)/100);
   const after=money(Math.max(0,subtotal-money(subtotal*percent/100)-amount));
-  const taxAmount=money(after*tax/100);
-  return {subtotal,tax_amount:taxAmount,total:money(after+taxAmount)};
+  let taxAmount = 0;
+  let total = after;
+  if (taxType === 'inclusive') {
+    taxAmount = money(after - (after / (1 + (tax/100))));
+    total = after;
+  } else {
+    taxAmount = money(after * tax / 100);
+    total = money(after + taxAmount);
+  }
+  return {subtotal,tax_amount:taxAmount,total};
 }
 function applyEffects(order,items,direction,user) {
   if(order.status!=='completed' || order.is_deleted) return;
@@ -94,7 +102,8 @@ function createOrder(input,user) {
     const maxDiscCreate = user.max_discount !== null && user.max_discount !== undefined ? user.max_discount : 100;
     if(disc>maxDiscCreate) throw error(`الخصم يتجاوز الحد المسموح (${maxDiscCreate}%) / Discount exceeds your allowed limit`,403);
     const tax=number(db.prepare("SELECT value FROM settings WHERE key='tax_rate'").get()?.value||0,'tax',0,100);
-    const calc=totals(items,disc,amount,tax),method=input.payment_method||'cash',pay=payment(method,status,input.paid_amount,calc.total);
+    const taxType=db.prepare("SELECT value FROM settings WHERE key='tax_type'").get()?.value||'exclusive';
+    const calc=totals(items,disc,amount,tax,taxType),method=input.payment_method||'cash',pay=payment(method,status,input.paid_amount,calc.total);
     const tableId=input.table_id?number(input.table_id,'table ID',1):null,customerId=input.customer_id?number(input.customer_id,'customer ID',1):null;
     if(tableId) {
       if(!db.prepare('SELECT id FROM "tables" WHERE id=?').get(tableId)) throw error('الطاولة غير موجودة / Table not found');
@@ -129,7 +138,8 @@ function updateOrder(id,input,user) {
     const maxDiscUpd = user.max_discount !== null && user.max_discount !== undefined ? user.max_discount : 100;
     if(disc>maxDiscUpd) throw error(`الخصم يتجاوز الحد المسموح (${maxDiscUpd}%) / Discount exceeds your allowed limit`,403);
     const items=input.items===undefined?old.items:normalizeItems(input.items,old.items);
-    const calc=totals(items,disc,amount,old.tax_percent),method=input.payment_method??old.payment_method;
+    const taxType=db.prepare("SELECT value FROM settings WHERE key='tax_type'").get()?.value||'exclusive';
+    const calc=totals(items,disc,amount,old.tax_percent,taxType),method=input.payment_method??old.payment_method;
     const pay=payment(method,status,input.paid_amount??(old.status==='completed'?Math.max(old.paid_amount,calc.total):undefined),calc.total,old);
     const effectKey = rows => JSON.stringify(rows.map(i=>[i.item_id,i.quantity]).sort((a,b)=>a[0]-b[0]));
     const effectsChanged = status!==old.status || calc.total!==old.total || effectKey(items)!==effectKey(old.items);

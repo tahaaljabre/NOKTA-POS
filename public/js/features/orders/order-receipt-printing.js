@@ -21,6 +21,8 @@ async function generateReceipt(order, targetPrinterType = 'cashier') {
   const addr = s.restaurant_address || '';
   const phone = s.restaurant_phone || '';
   const taxNo = s.tax_number || '';
+  const taxRate = parseFloat(s.tax_rate) || 0;
+  const taxType = s.tax_type || 'exclusive';
   
   const paymentLabels = {
     cash: currentLang === 'ar' ? '💵 نقداً (Cash)' : '💵 Cash',
@@ -192,7 +194,7 @@ async function generateReceipt(order, targetPrinterType = 'cashier') {
   <div class="restaurant-title">${escapeHtml(name)}</div>
   ${addr ? `<div class="header-info">📍 ${escapeHtml(addr)}</div>` : ''}
   ${phone ? `<div class="header-info">📞 ${escapeHtml(phone)}</div>` : ''}
-  ${taxNo ? `<div class="tax-badge">🏛️ ${currentLang === 'ar' ? 'الرقم الضريبي' : 'Tax / VAT ID'}: <strong>${escapeHtml(taxNo)}</strong></div>` : ''}
+  ${taxNo ? `<div class="tax-badge">${currentLang === 'ar' ? 'Tax Invoice / ใบกำกับภาษีอย่างย่อ' : 'Tax Invoice / ใบกำกับภาษีอย่างย่อ'}<br>🏛️ ${currentLang === 'ar' ? 'الرقم الضريبي' : 'Tax ID'}: <strong>${escapeHtml(taxNo)}</strong></div>` : ''}
   
   <div class="dash-line"></div>
   
@@ -236,19 +238,35 @@ async function generateReceipt(order, targetPrinterType = 'cashier') {
   <div class="double-line"></div>
   
   <div class="total-section">
-    ${order.discount_percent > 0 ? `
-      <div class="total-row">
-        <span>${t('subtotal')}</span>
-        <span>${(order.subtotal || ((order.items || []).reduce((sum, item) => sum + (item.price * item.quantity), 0))).toFixed(2)} ${escapeHtml(currency)}</span>
-      </div>
-      <div class="total-row">
-        <span>${t('discount')} (${order.discount_percent}%)</span>
-        <span>-${((order.subtotal || ((order.items || []).reduce((sum, item) => sum + (item.price * item.quantity), 0))) * (order.discount_percent/100)).toFixed(2)} ${escapeHtml(currency)}</span>
-      </div>
-    ` : ''}
+    ${(() => {
+      let html = '';
+      const total = order.total || 0;
+      let subtotal = order.subtotal || ((order.items || []).reduce((sum, item) => sum + (item.price * item.quantity), 0));
+      let taxAmt = order.tax_amount || 0;
+      if (!order.tax_amount && taxRate > 0) {
+         if (taxType === 'inclusive') {
+           taxAmt = subtotal - (subtotal / (1 + (taxRate/100)));
+         } else {
+           taxAmt = subtotal * (taxRate/100);
+         }
+      }
+
+      if (order.discount_percent > 0) {
+        html += `<div class="total-row"><span>${t('subtotal')}</span><span>${subtotal.toFixed(2)} ${escapeHtml(currency)}</span></div>`;
+        html += `<div class="total-row"><span>${t('discount')} (${order.discount_percent}%)</span><span>-${(subtotal * (order.discount_percent/100)).toFixed(2)} ${escapeHtml(currency)}</span></div>`;
+        subtotal = subtotal - (subtotal * (order.discount_percent/100));
+      }
+
+      html += `<div class="total-row"><span>${currentLang === 'ar' ? (taxType === 'inclusive' ? 'الإجمالي قبل الضريبة' : 'المجموع') : (taxType === 'inclusive' ? 'Subtotal (Before Tax)' : 'Subtotal')}</span><span>${(subtotal - (taxType === 'inclusive' ? taxAmt : 0)).toFixed(2)} ${escapeHtml(currency)}</span></div>`;
+      
+      if (taxRate > 0 || taxAmt > 0) {
+        html += `<div class="total-row"><span>${currentLang === 'ar' ? 'الضريبة' : 'VAT'} (${taxRate}%) ${taxType==='inclusive'?(currentLang==='ar'?'(مشمولة)':'(Incl)'):''}</span><span>${taxAmt.toFixed(2)} ${escapeHtml(currency)}</span></div>`;
+      }
+      return html;
+    })()}
     
     <div class="grand-total-row">
-      <span>${currentLang === 'ar' ? 'المجموع الكلي' : 'TOTAL'}</span>
+      <span>${currentLang === 'ar' ? 'الإجمالي النهائي' : 'TOTAL'}</span>
       <span>${(order.total || 0).toFixed(2)} ${escapeHtml(currency)}</span>
     </div>
     
