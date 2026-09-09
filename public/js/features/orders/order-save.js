@@ -5,7 +5,8 @@ async function saveOrder(printAfterSave = false) {
   if (!currentOrder.items.length) { toast(currentLang==='ar'?'أضف صنفًا أولًا':'Add an item first','error');return; }
   saveOrder.busy=true;
   currentOrder.offline_id ||= newRequestId();
-  const payload={offline_id:currentOrder.offline_id,employee_id:currentUser.id,table_id:currentOrder.table_id,customer_id:currentOrder.customer_id,type:currentOrder.type,note:currentOrder.note||'',discount_percent:currentOrder.discount||0,discount_amount:0,payment_method:currentOrder.payment_method||'cash',items:currentOrder.items,status:'active',attributes:currentOrder.attributes||{},created_at:new Date().toISOString(),print_pending:printAfterSave};
+  const isPrepaid = document.getElementById('chk-prepaid')?.checked || false;
+  const payload={offline_id:currentOrder.offline_id,employee_id:currentUser.id,table_id:currentOrder.table_id,customer_id:currentOrder.customer_id,type:currentOrder.type,note:currentOrder.note||'',discount_percent:currentOrder.discount||0,discount_amount:0,payment_method:currentOrder.payment_method||'cash',items:currentOrder.items,status:'active',attributes:currentOrder.attributes||{},created_at:new Date().toISOString(),print_pending:printAfterSave,is_prepaid:isPrepaid};
   let saved;
   try {
     saved=await api('/api/orders','POST',payload);

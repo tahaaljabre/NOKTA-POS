@@ -322,3 +322,4 @@ Object.assign(I18N_EN, { admin_attendance:'HR & Attendance', attendance_separate
 Object.assign(I18N_EN, { perm_attendance:'Attendance' });
 Object.assign(I18N_EN, { hr_name_ar:'Arabic name', hr_name_en:'English name', hr_code:'Employee code', hr_phone:'Phone number', hr_department:'Department', hr_job_title:'Job title', hr_employment_type:'Employment type', hr_full_time:'Full time', hr_part_time:'Part time', hr_temporary:'Temporary', hr_hire_date:'Hire date', hr_required:'Name and employee code are required' });
 Object.assign(I18N_EN, { edit_hr_employee:'Edit HR employee', hr_delete_confirm:'Deactivate this HR employee? Attendance records will remain saved.', hr_deleted:'Employee deactivated', print_all_hr:'Print all employees report', hr_employee_report:'Employee report', all_hr_report:'All HR employees report' });
+Object.assign(I18N_EN, { pre_paid: 'Pre-paid', order_done: 'Done', tax_amount: 'Tax' });

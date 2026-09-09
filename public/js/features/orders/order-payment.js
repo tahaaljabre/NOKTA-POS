@@ -32,7 +32,15 @@ async function openPayOrderModal(orderId) {
       let sub = 0;
       editOrderItems.forEach(it => { sub += (it.price * it.quantity); });
       const disc = sub * ((order.discount_percent || 0) / 100);
-      return Math.max(0, sub - disc);
+      const afterDisc = Math.max(0, sub - disc);
+      
+      const taxRate = order.tax_percent !== undefined ? order.tax_percent : (window.settings?.tax_rate || 0);
+      const taxType = window.settings?.tax_type || 'exclusive';
+      
+      if (taxType === 'exclusive' && taxRate > 0) {
+        return afterDisc + (afterDisc * (taxRate / 100));
+      }
+      return afterDisc;
     }
 
     const modalHtml = `
@@ -131,6 +139,7 @@ async function openPayOrderModal(orderId) {
           version: order.version,
           status: 'completed',
           payment_method: selectedMethod,
+          tax_percent: taxRate, // Provide current tax rate to backend
           total: finalTotal,
           paid_amount: cashPaid,
           change_amount: changeDue,
@@ -329,3 +338,16 @@ async function printExistingOrder(id) {
   const o = await api(`/api/orders/${id}`);
   generateReceipt(o);
 }
+
+async function completePrepaidOrder(orderId) {
+  if (!confirm(currentLang === 'ar' ? 'إنهاء الطلب كمدفوع؟' : 'Complete this pre-paid order?')) return;
+  try {
+    await api(`/api/orders/${orderId}`, 'PUT', { status: 'completed' });
+    toast(currentLang === 'ar' ? 'تم إنهاء الطلب' : 'Order completed', 'success');
+    if (typeof loadActiveOrders === 'function') loadActiveOrders();
+    if (typeof loadTables === 'function') loadTables();
+  } catch (error) {
+    toast(error.message, 'error');
+  }
+}
+

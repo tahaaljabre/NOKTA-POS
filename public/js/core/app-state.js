@@ -57,9 +57,9 @@ function applyDiscountPermissions() {
   const discountInput = document.getElementById('discount-input');
   if (!discountRow || !discountInput) return;
   const isAdmin = currentUser && currentUser.role === 'admin';
-  const hasDiscountPerm = isAdmin || !!(currentUser && currentUser.permissions && currentUser.permissions.discount_orders);
   // مصدر الحقيقة الوحيد: currentUser.max_discount القادم من الخادم عند تسجيل الدخول
   const maxDisc = currentUser && currentUser.max_discount !== null && currentUser.max_discount !== undefined ? Number(currentUser.max_discount) : 100;
+  const hasDiscountPerm = isAdmin || !!(currentUser && currentUser.permissions && currentUser.permissions.discount_orders) || (maxDisc > 0 && maxDisc < 100);
   
   // Only show if they have permission AND max discount is greater than 0
   discountRow.style.display = (hasDiscountPerm && maxDisc > 0) ? '' : 'none';

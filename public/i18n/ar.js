@@ -73,8 +73,8 @@ const I18N_AR = {
     table_empty: 'فارغة',
     table_occupied: 'مشغولة',
     // Orders
-    order_pay: 'دفع وطباعة',
-    order_completed: 'تم',
+    order_pay: 'دفع',
+    order_completed: 'مكتمل',
     order_cancel: 'إلغاء',
     order_print: 'طباعة',
     no_active_orders: 'لا يوجد طلبات نشطة',
@@ -336,3 +336,4 @@ Object.assign(I18N_AR, { admin_attendance:'شؤون الموظفين والحض�
 Object.assign(I18N_AR, { perm_attendance:'الحضور والانصراف' });
 Object.assign(I18N_AR, { hr_name_ar:'الاسم بالعربي', hr_name_en:'الاسم بالإنجليزي', hr_code:'الرمز الوظيفي', hr_phone:'رقم الهاتف', hr_department:'القسم', hr_job_title:'المسمى الوظيفي', hr_employment_type:'نوع الدوام', hr_full_time:'دوام كامل', hr_part_time:'دوام جزئي', hr_temporary:'مؤقت', hr_hire_date:'تاريخ التعيين', hr_required:'الاسم والرمز الوظيفي مطلوبان' });
 Object.assign(I18N_AR, { edit_hr_employee:'تعديل موظف شؤون الموظفين', hr_delete_confirm:'هل تريد تعطيل موظف شؤون الموظفين؟ ستبقى سجلاته محفوظة.', hr_deleted:'تم تعطيل الموظف', print_all_hr:'طباعة تقرير جميع الموظفين', hr_employee_report:'تقرير الموظف', all_hr_report:'تقرير جميع موظفي شؤون الموظفين' });
+Object.assign(I18N_AR, { pre_paid: 'مدفوع مسبقاً', order_done: 'تم', tax_amount: 'الضريبة' });

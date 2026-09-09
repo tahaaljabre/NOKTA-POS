@@ -94,10 +94,16 @@
                   data-i18n="currency">ريال</span>
               </div>
             </div>
-            <div class="order-actions">
-              <button class="btn btn-save" id="btn-save-order" data-i18n="save_order">حفظ الطلب</button>
-              <button class="btn btn-print" id="btn-print-order" data-i18n="print">طباعة</button>
-              <button class="btn btn-new" id="btn-new-order" data-i18n="new">جديد</button>
+            <div class="order-actions" style="display:flex; flex-direction:column; gap:8px;">
+              <label class="prepaid-checkbox" style="display:flex; align-items:center; justify-content:center; gap:8px; cursor:pointer; background:#f0f0f0; padding:10px; border-radius:8px; font-weight:bold; color:#444;">
+                <input type="checkbox" id="chk-prepaid" style="width:20px;height:20px;">
+                <span data-i18n="pre_paid">مدفوع مسبقاً</span>
+              </label>
+              <div style="display:flex; gap:10px;">
+                <button class="btn btn-save" id="btn-save-order" data-i18n="save_order" style="flex:1;">حفظ الطلب</button>
+                <button class="btn btn-print" id="btn-print-order" data-i18n="print" style="flex:1;">طباعة</button>
+                <button class="btn btn-new" id="btn-new-order" data-i18n="new" style="flex:1;">جديد</button>
+              </div>
             </div>
           </div>
         </div>

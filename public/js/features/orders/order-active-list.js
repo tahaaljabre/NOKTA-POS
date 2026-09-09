@@ -20,7 +20,9 @@ async function loadActiveOrders() {
         <div class="order-card-emp" style="font-size:11px;color:#999;">${escapeHtml(o.employee_name || '')}</div>
         <div class="order-card-time">${parsePOSDate(o.created_at).toLocaleTimeString(currentLang === 'ar' ? 'ar-SA' : 'en-US')}</div>
         <div class="order-card-actions">
-          <button class="btn-pay" onclick="openPayOrderModal(${o.id})">💳 ${t('order_pay')}</button>
+          ${ (o.paid_amount >= o.total - 0.01) ? 
+             `<button class="btn-pay" style="background:#28a745;color:white;" onclick="completePrepaidOrder(${o.id})">✔️ ${t('order_done')}</button>` :
+             `<button class="btn-pay" onclick="openPayOrderModal(${o.id})">💳 ${t('order_pay')}</button>` }
           <button class="btn-print-order" onclick="printExistingOrder(${o.id})">🖨️ ${t('order_print')}</button>
           <button class="btn-cancel-order" onclick="cancelOrder(${o.id})">✕ ${t('order_cancel')}</button>
         </div>

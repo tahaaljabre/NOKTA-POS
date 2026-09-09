@@ -133,6 +133,8 @@ function resetOrder() {
   if (cashInput) cashInput.value = '';
   const paymentButton = document.getElementById('btn-select-payment');
   if (paymentButton) paymentButton.innerHTML = `💵 <span data-i18n="payment_cash">${t('payment_cash')}</span>`;
+  const chk = document.getElementById('chk-prepaid');
+  if (chk) chk.checked = false;
   renderOrderItems();
   updateOrderTotals();
 }

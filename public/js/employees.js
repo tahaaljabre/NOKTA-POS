@@ -134,7 +134,7 @@ async function openEmployeeModal(empId = null) {
           daily_closing: document.getElementById('perm-daily-closing').checked,
           edit_orders: document.getElementById('perm-edit-orders').checked,
           delete_orders: document.getElementById('perm-delete-orders').checked,
-          view_invoices: document.getElementById('perm-view-invoices').checked,
+          view_invoices: document.getElementById('perm-view-invoices').checked
         }
     };
     if (document.getElementById('modal-emp-active')) {
@@ -152,3 +152,15 @@ async function openEmployeeModal(empId = null) {
     loadEmployeesAdmin();
   });
 }
+
+window.toggleEmployeeFloorFields = function(role) {
+  // Uncheck/check certain permissions based on role automatically to prevent mistakes
+  if (role === 'kitchen') {
+    document.getElementById('perm-kitchen').checked = true;
+    document.getElementById('perm-pos').checked = false;
+  } else if (role === 'cashier' || role === 'waiter') {
+    document.getElementById('perm-pos').checked = true;
+  } else if (role === 'admin') {
+    document.querySelectorAll('.perm-checkboxes input[type="checkbox"]').forEach(cb => cb.checked = true);
+  }
+};

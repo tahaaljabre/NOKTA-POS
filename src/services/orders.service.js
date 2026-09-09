@@ -98,12 +98,13 @@ function createOrder(input,user) {
     const items=normalizeItems(input.items),status=input.status||'active',type=input.type||'dine_in';
     if(!['active','completed'].includes(status) || !['dine_in','takeaway','delivery'].includes(type)) throw error('حالة أو نوع الطلب غير صالح / Invalid order state or type');
     const disc=number(input.discount_percent??0,'discount',0,100),amount=money(number(input.discount_amount??0,'discount amount'));
-    if((disc || amount) && !can(user,'discount_orders')) throw error('صلاحية الخصم مطلوبة / Discount permission required',403);
     const maxDiscCreate = user.max_discount !== null && user.max_discount !== undefined ? user.max_discount : 100;
+    const hasDiscountPerm = can(user,'discount_orders') || (user.max_discount !== null && user.max_discount > 0 && user.max_discount < 100);
+    if((disc || amount) && !hasDiscountPerm) throw error('صلاحية الخصم مطلوبة / Discount permission required',403);
     if(disc>maxDiscCreate) throw error(`الخصم يتجاوز الحد المسموح (${maxDiscCreate}%) / Discount exceeds your allowed limit`,403);
     const tax=number(db.prepare("SELECT value FROM settings WHERE key='tax_rate'").get()?.value||0,'tax',0,100);
     const taxType=db.prepare("SELECT value FROM settings WHERE key='tax_type'").get()?.value||'exclusive';
-    const calc=totals(items,disc,amount,tax,taxType),method=input.payment_method||'cash',pay=payment(method,status,input.paid_amount,calc.total);
+    const calc=totals(items,disc,amount,tax,taxType),method=input.payment_method||'cash',pay=payment(method,status,input.is_prepaid?calc.total:input.paid_amount,calc.total);
     const tableId=input.table_id?number(input.table_id,'table ID',1):null,customerId=input.customer_id?number(input.customer_id,'customer ID',1):null;
     if(tableId) {
       if(!db.prepare('SELECT id FROM "tables" WHERE id=?').get(tableId)) throw error('الطاولة غير موجودة / Table not found');
@@ -132,19 +133,23 @@ function updateOrder(id,input,user) {
     const status=input.status??old.status;
     if(!['active','completed','cancelled'].includes(status) || (old.status==='completed' && status==='active')) throw error('انتقال حالة غير صالح / Invalid state transition');
     if(status==='cancelled' && !can(user,'cancel_orders') && !can(user,'delete_orders')) throw error('صلاحية الإلغاء مطلوبة / Cancellation permission required',403);
-    const disc=number(input.discount_percent??old.discount_percent,'discount',0,100),amount=money(number(input.discount_amount??old.discount_amount,'discount amount'));
-    if((disc!==old.discount_percent || amount!==old.discount_amount) && !can(user,'discount_orders')) throw error('صلاحية الخصم مطلوبة / Discount permission required',403);
+    const disc=input.discount_percent===undefined?old.discount_percent:number(input.discount_percent,'discount',0,100);
+    const amount=input.discount_amount===undefined?old.discount_amount:money(number(input.discount_amount,'discount amount'));
+    
     // max_discount: NULL في DB يُعامل كـ 100 (بلا حد)
     const maxDiscUpd = user.max_discount !== null && user.max_discount !== undefined ? user.max_discount : 100;
+    const hasDiscountPermUpd = can(user,'discount_orders') || (user.max_discount !== null && user.max_discount > 0 && user.max_discount < 100);
+    if((disc!==old.discount_percent || amount!==old.discount_amount) && !hasDiscountPermUpd) throw error('صلاحية الخصم مطلوبة / Discount permission required',403);
     if(disc>maxDiscUpd) throw error(`الخصم يتجاوز الحد المسموح (${maxDiscUpd}%) / Discount exceeds your allowed limit`,403);
     const items=input.items===undefined?old.items:normalizeItems(input.items,old.items);
     const taxType=db.prepare("SELECT value FROM settings WHERE key='tax_type'").get()?.value||'exclusive';
-    const calc=totals(items,disc,amount,old.tax_percent,taxType),method=input.payment_method??old.payment_method;
-    const pay=payment(method,status,input.paid_amount??(old.status==='completed'?Math.max(old.paid_amount,calc.total):undefined),calc.total,old);
+    const taxP=input.tax_percent !== undefined ? Number(input.tax_percent) : old.tax_percent;
+    const calc=totals(items,disc,amount,taxP,taxType),method=input.payment_method??old.payment_method;
+    const pay=payment(method,status,input.is_prepaid!==undefined?(input.is_prepaid?calc.total:input.paid_amount):input.paid_amount??(old.status==='completed'?Math.max(old.paid_amount,calc.total):(old.paid_amount>0?old.paid_amount:undefined)),calc.total,old);
     const effectKey = rows => JSON.stringify(rows.map(i=>[i.item_id,i.quantity]).sort((a,b)=>a[0]-b[0]));
     const effectsChanged = status!==old.status || calc.total!==old.total || effectKey(items)!==effectKey(old.items);
     if(effectsChanged) applyEffects(old,old.items,-1,user);
-    db.prepare('UPDATE orders SET status=?,note=?,discount_percent=?,discount_amount=?,subtotal=?,tax_amount=?,total=?,payment_method=?,paid_amount=?,change_amount=?,completed_at=?,attributes=?,version=version+1 WHERE id=?').run(status,input.note===undefined?old.note:text(input.note),disc,amount,calc.subtotal,calc.tax_amount,calc.total,method,pay.paid_amount,pay.change_amount,status==='active'?null:(old.completed_at||new Date().toISOString()),input.attributes===undefined?old.attributes:JSON.stringify(json(input.attributes)),id);
+    db.prepare('UPDATE orders SET status=?,note=?,discount_percent=?,discount_amount=?,tax_percent=?,subtotal=?,tax_amount=?,total=?,payment_method=?,paid_amount=?,change_amount=?,completed_at=?,attributes=?,version=version+1 WHERE id=?').run(status,input.note===undefined?old.note:text(input.note),disc,amount,taxP,calc.subtotal,calc.tax_amount,calc.total,method,pay.paid_amount,pay.change_amount,status==='active'?null:(old.completed_at||new Date().toISOString()),input.attributes===undefined?old.attributes:JSON.stringify(json(input.attributes)),id);
     if(input.items!==undefined) persistItems(id,items);
     if(status!=='active' && old.table_id) db.prepare('UPDATE "tables" SET status=\'empty\',current_order_id=NULL WHERE id=? AND current_order_id=?').run(old.table_id,id);
     const saved=getOrder(id);if(effectsChanged) applyEffects(saved,saved.items,1,user);
