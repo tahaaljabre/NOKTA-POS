@@ -113,6 +113,16 @@ async function initDatabase() {
     console.error('Migration error:', e.message);
   }
 
+  // Re-run idempotent schema statements after migrations so indexes that
+  // reference newly-added compatibility columns are created without errors.
+  for (const query of schemaQueries) {
+    try { _sqlDb.exec(query); } catch (e) {
+      if (!e.message.includes('already exists') && !e.message.includes('duplicate column')) {
+        console.error('Post-migration schema error:', e.message);
+      }
+    }
+  }
+
   // Seed default data only if the whole database is genuinely empty. A clean
   // demo can intentionally keep its menu and tables while having no employees.
   if (db.prepare('SELECT id FROM employees LIMIT 1').get()) db.prepare("INSERT OR REPLACE INTO settings(key,value) VALUES ('setup_complete','1')").run();

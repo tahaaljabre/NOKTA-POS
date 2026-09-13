@@ -6,10 +6,13 @@ async function saveOrder(printAfterSave = false) {
   saveOrder.busy=true;
   currentOrder.offline_id ||= newRequestId();
   const isPrepaid = document.getElementById('chk-prepaid')?.checked || false;
-  const payload={offline_id:currentOrder.offline_id,employee_id:currentUser.id,table_id:currentOrder.table_id,customer_id:currentOrder.customer_id,type:currentOrder.type,note:currentOrder.note||'',discount_percent:currentOrder.discount||0,discount_amount:0,payment_method:currentOrder.payment_method||'cash',items:currentOrder.items,status:'active',attributes:currentOrder.attributes||{},created_at:new Date().toISOString(),print_pending:printAfterSave,is_prepaid:isPrepaid};
+  const selectedStation = typeof localStorage !== 'undefined' ? localStorage.getItem('pos_current_station') : null;
+  const payload={offline_id:currentOrder.offline_id,employee_id:currentUser.id,cashier_code:currentUser.active_cashier_code||currentUser.cashier_code||'',station_id:selectedStation||currentUser.default_station,table_id:currentOrder.table_id,customer_id:currentOrder.customer_id,type:currentOrder.type,note:currentOrder.note||'',discount_percent:currentOrder.discount||0,discount_amount:0,payment_method:currentOrder.payment_method||'cash',items:currentOrder.items,status:'active',attributes:currentOrder.attributes||{},created_at:new Date().toISOString(),print_pending:printAfterSave,is_prepaid:isPrepaid};
   let saved;
   try {
-    saved=await api('/api/orders','POST',payload);
+    saved=currentOrder.editingOrderId
+      ? await api(`/api/orders/${currentOrder.editingOrderId}`,'PUT',{...payload,version:currentOrder.editingOrderVersion,status:'active',paid_amount:currentOrder.cash_received||0})
+      : await api('/api/orders','POST',payload);
     resetOrder();
     toast(currentLang==='ar'?'تم حفظ الطلب':'Order saved','success');
     await printProductionTickets(saved,saved.items);

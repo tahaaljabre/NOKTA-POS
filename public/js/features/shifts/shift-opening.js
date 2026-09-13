@@ -34,6 +34,9 @@ function openShiftOpeningModal() {
       <h3 style="color:var(--primary);margin-bottom:6px;font-size:17px;">
         ${currentLang === 'ar' ? `مرحباً بك يا ${escapeHtml(currentUser.name)}` : `Welcome ${escapeHtml(currentUser.name)}`}
       </h3>
+      <div style="display:inline-block;margin:4px auto 14px;padding:7px 14px;border-radius:999px;background:var(--surface-soft);border:1px solid var(--border);font-weight:700;color:var(--primary);">
+        🧾 ${currentLang === 'ar' ? 'الكاشير' : 'Cashier'}: ${escapeHtml(currentUser.cashier_code || (currentLang === 'ar' ? 'غير مربوط' : 'Unassigned'))}
+      </div>
       <p style="font-size:13px;color:var(--text-light);margin-bottom:18px;line-height:1.5;">
         ${currentLang === 'ar' ? 'لبدء اليوم واستلام الكاشير، يرجى إدخال مبلغ العُهدة النقدية (الفكة الافتتاحية) الموجودة بالدرج:' : 'Please enter the opening cash float in the drawer to start your shift:'}
       </p>
@@ -76,6 +79,7 @@ async function submitShiftOpening() {
     opening_cash: floatAmt,
     notes: notes,
     date: today
+    ,cashier_code: currentUser?.cashier_code || ''
   });
 
   if (res.error) {

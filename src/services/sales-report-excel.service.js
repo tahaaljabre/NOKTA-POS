@@ -2,16 +2,18 @@ const ExcelJS = require('exceljs');
 
 const labels = {
   ar: {
-    title: 'تقرير المبيعات', summary: 'الملخص', daily: 'المبيعات اليومية', payments: 'طرق الدفع', employees: 'الموظفون',
+    title: 'تقرير المبيعات', summary: 'الملخص', daily: 'المبيعات اليومية', payments: 'طرق الدفع', employees: 'الموظفون', cashiers: 'الكاشيرات', types: 'أنواع الطلبات',
     periodFrom: 'من', periodTo: 'إلى', timezone: 'المنطقة الزمنية', totalOrders: 'إجمالي الطلبات', totalRevenue: 'إجمالي الإيرادات',
+    totalTax: 'الضريبة المحصلة', taxRate: 'نسبة الضريبة',
     averageOrder: 'متوسط الطلب', date: 'التاريخ', orders: 'الطلبات', revenue: 'الإيراد', paymentMethod: 'طريقة الدفع',
-    employee: 'الموظف', count: 'العدد', currency: 'العملة'
+    orderType: 'نوع الطلب', employee: 'الموظف', cashier: 'رمز الكاشير', count: 'العدد', currency: 'العملة', deliveryApps: 'تطبيقات التوصيل', app: 'التطبيق', legacyCollection: 'تحصيل قديم للمراجعة'
   },
   en: {
-    title: 'Sales Report', summary: 'Summary', daily: 'Daily Sales', payments: 'Payment Methods', employees: 'Employees',
+    title: 'Sales Report', summary: 'Summary', daily: 'Daily Sales', payments: 'Payment Methods', employees: 'Employees', cashiers: 'Cashiers', types: 'Order Types',
     periodFrom: 'From', periodTo: 'To', timezone: 'Time Zone', totalOrders: 'Total Orders', totalRevenue: 'Total Revenue',
+    totalTax: 'Total Tax', taxRate: 'Tax Rate',
     averageOrder: 'Average Order', date: 'Date', orders: 'Orders', revenue: 'Revenue', paymentMethod: 'Payment Method',
-    employee: 'Employee', count: 'Count', currency: 'Currency'
+    orderType: 'Order Type', employee: 'Employee', cashier: 'Cashier Code', count: 'Count', currency: 'Currency', deliveryApps: 'Delivery Apps', app: 'App', legacyCollection: 'Older collection to review'
   }
 };
 
@@ -57,19 +59,30 @@ async function createSalesReportWorkbook(report, options = {}) {
 
   const totalOrders = Number(report.totals?.total_orders || 0);
   const totalRevenue = Number(report.totals?.total_revenue || 0);
+  const totalTax = Number(report.totals?.total_tax || 0);
+  const taxRate = Number(report.totals?.tax_rate || 0);
+  
   const summary = addDataSheet(workbook, l.summary, l.title,
-    [l.periodFrom, l.periodTo, l.timezone, l.currency, l.totalOrders, l.totalRevenue, l.averageOrder],
-    [[report.from, report.to, report.timezone || '', currency, totalOrders, totalRevenue, totalOrders ? totalRevenue / totalOrders : 0]],
-    [14, 14, 22, 12, 16, 18, 18], language);
+    [l.periodFrom, l.periodTo, l.timezone, l.currency, l.totalOrders, l.totalRevenue, l.totalTax, l.taxRate, l.averageOrder],
+    [[report.from, report.to, report.timezone || '', currency, totalOrders, totalRevenue, totalTax, taxRate, totalOrders ? totalRevenue / totalOrders : 0]],
+    [14, 14, 22, 12, 16, 18, 18, 14, 18], language);
   summary.getColumn(6).numFmt = '#,##0.00';
   summary.getColumn(7).numFmt = '#,##0.00';
+  summary.getColumn(9).numFmt = '#,##0.00';
+
+  const types = addDataSheet(workbook, l.types, l.types,
+    [l.orderType, l.count, l.revenue],
+    (report.by_type || []).map(row => [String(row.type || ''), Number(row.count || 0), Number(row.total || 0)]),
+    [24, 14, 18], language);
+  types.getColumn(3).numFmt = '#,##0.00';
 
   const daily = addDataSheet(workbook, l.daily, l.daily,
-    [l.date, l.orders, l.revenue],
-    (report.daily || []).map(row => [new Date(`${row.day}T00:00:00Z`), Number(row.orders || 0), Number(row.revenue || 0)]),
-    [16, 14, 18], language);
+    [l.date, l.orders, l.revenue, l.totalTax],
+    (report.daily || []).map(row => [new Date(`${row.day}T00:00:00Z`), Number(row.orders || 0), Number(row.revenue || 0), Number(row.tax || 0)]),
+    [16, 14, 18, 18], language);
   daily.getColumn(1).numFmt = 'yyyy-mm-dd';
   daily.getColumn(3).numFmt = '#,##0.00';
+  daily.getColumn(4).numFmt = '#,##0.00';
 
   const payments = addDataSheet(workbook, l.payments, l.payments,
     [l.paymentMethod, l.count, l.revenue],
@@ -77,11 +90,28 @@ async function createSalesReportWorkbook(report, options = {}) {
     [24, 14, 18], language);
   payments.getColumn(3).numFmt = '#,##0.00';
 
+  if ((report.by_delivery_app || []).length) {
+    const apps = addDataSheet(workbook, l.deliveryApps, l.deliveryApps,
+      [l.app, l.count, l.revenue, l.legacyCollection],
+      report.by_delivery_app.map(row => [String(row.app_name || row.app_id || ''), Number(row.count || 0), Number(row.total || 0), Number(row.legacy_collection || 0)]),
+      [30, 14, 18, 24], language);
+    apps.getColumn(3).numFmt = '#,##0.00';
+    apps.getColumn(4).numFmt = '#,##0.00';
+  }
+
   const employees = addDataSheet(workbook, l.employees, l.employees,
     [l.employee, l.orders, l.revenue],
     (report.by_employee || []).map(row => [String(row.employee_name || ''), Number(row.count || 0), Number(row.total || 0)]),
     [28, 14, 18], language);
   employees.getColumn(3).numFmt = '#,##0.00';
+
+  if ((report.by_cashier || []).length) {
+    const cashiers = addDataSheet(workbook, l.cashiers, l.cashiers,
+      [l.cashier, l.orders, l.revenue, language === 'ar' ? 'النادلون' : 'Waiters'],
+      report.by_cashier.map(row => [String(row.cashier_code || ''), Number(row.count || 0), Number(row.total || 0), (row.waiters || []).map(w => `${w.employee_name}: ${Number(w.total || 0).toFixed(2)}`).join(' | ')]),
+      [24, 14, 18, 44], language);
+    cashiers.getColumn(3).numFmt = '#,##0.00';
+  }
 
   return workbook;
 }

@@ -1,0 +1,54 @@
+:root {
+  /* Royal Burgundy Primary */
+  --primary: #721c24;
+  --primary-hover: #561118;
+  --primary-light: #fbebed;
+  --primary-dark: #3e070e;
+  
+  /* Champagne Gold & Accent */
+  --gold: #b38e2e;
+  --gold-hover: #967420;
+  --gold-light: #fef9ec;
+  --gold-glow: rgba(179, 142, 46, 0.25);
+  
+  /* Milky Cream & Warm Surfaces */
+  --bg: #fcf9f5;
+  --bg-subtle: #f6f0e8;
+  --card: #ffffff;
+  --card-hover: #fffdfa;
+  
+  /* Premium Typography Colors */
+  --text: #2d2422;
+  --text-light: #7c6f6a;
+  --text-muted: #a69b96;
+  
+  /* Borders & Dividers */
+  --border: #eadfce;
+  --border-light: #f3ece1;
+  --border-focus: #721c24;
+  
+  /* Status Colors */
+  --success: #197a56;
+  --success-hover: #125e42;
+  --success-light: #ecfdf5;
+  --danger: #b91c1c;
+  --danger-hover: #991b1b;
+  --danger-light: #fef2f2;
+  --warning: #c26100;
+  --warning-light: #fffbeb;
+  
+  /* Luxury Shadows */
+  --shadow-sm: 0 2px 4px rgba(45, 36, 34, 0.04);
+  --shadow: 0 4px 12px rgba(45, 36, 34, 0.06), 0 1px 3px rgba(45, 36, 34, 0.04);
+  --shadow-lg: 0 12px 28px rgba(62, 7, 14, 0.12), 0 4px 10px rgba(45, 36, 34, 0.05);
+  --shadow-gold: 0 4px 14px rgba(179, 142, 46, 0.25);
+  
+  /* Radius */
+  --radius-lg: 18px;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --radius-pill: 9999px;
+  
+  /* Fonts */
+  --font: 'Readex Pro', 'Segoe UI', Tahoma, system-ui, -apple-system, sans-serif;
+}

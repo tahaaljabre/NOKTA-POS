@@ -1,13 +1,17 @@
 // DOM startup wiring, connectivity events, and device identity.
 // ===== Init =====
 document.addEventListener('DOMContentLoaded', async () => {
+  if (checkNativeSetup()) return; // Halt init if setup is required
+  // Initialize login controls immediately; a slow or unavailable view fragment
+  // must never leave the PIN pad inert.
+  setupLogin();
+  // Bind the primary navigation immediately as well; view loading is asynchronous.
+  setupNavigation();
   await loadPrimaryViews();
   setupAttendanceAdmin();
   updateHeaderRestaurantName();
   applyTranslations();
-  setupLogin();
   checkInitialSetup();
-  setupNavigation();
   setupModals();
   setupTime();
   document.getElementById('lang-toggle-login').onclick = () => toggleLanguage();
@@ -17,9 +21,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (kitchenLink) kitchenLink.onclick = event => {
     if (!currentUser?.token) return;
     event.preventDefault();
-    // The URL fragment stays in the browser and is never sent in the HTTP request.
-    // It lets a separate Android WebView/new tab receive the already authenticated session.
-    window.open(`kds.html#session=${encodeURIComponent(currentUser.token)}`, '_blank', 'noopener');
+    if (CapDetect.isCapacitorNative()) {
+      sessionStorage.setItem('pos_kitchen_token', currentUser.token || '');
+      window.location.href = 'kds.html';
+      return;
+    }
+    const kitchenWindow = window.open('kds.html', '_blank');
+    if (!kitchenWindow) return toast(currentLang === 'ar' ? 'تعذر فتح شاشة المطبخ؛ اسمح بالنوافذ المنبثقة.' : 'Could not open KDS; allow pop-ups.');
+    const transferKitchenSession = message => {
+      if (message.origin !== window.location.origin || message.source !== kitchenWindow || message.data?.type !== 'nokta-kds:ready') return;
+      kitchenWindow.postMessage({ type: 'nokta-kds:session', token: currentUser.token }, window.location.origin);
+      window.removeEventListener('message', transferKitchenSession);
+    };
+    window.addEventListener('message', transferKitchenSession);
   };
   setupHeaderToolsMenu();
   
@@ -40,4 +54,61 @@ function getDeviceId() {
     localStorage.setItem('device_id', id);
   }
   return id;
+}
+
+function checkNativeSetup() {
+  if (!CapDetect.isCapacitorNative()) return false;
+  const serverUrl = CapDetect.getServerUrl();
+  if (serverUrl) return false;
+
+  document.getElementById('login-screen').classList.add('hidden');
+  document.getElementById('native-setup-screen').classList.remove('hidden');
+
+  document.getElementById('save-native-url-btn').onclick = async () => {
+    const urlInput = document.getElementById('native-server-url');
+    const errEl = document.getElementById('native-url-error');
+    const btn = document.getElementById('save-native-url-btn');
+    let url = urlInput.value.trim();
+    if (!url) {
+      errEl.textContent = currentLang === 'ar' ? 'يرجى إدخال رابط الخادم' : 'Please enter the server URL';
+      errEl.style.display = 'block';
+      return;
+    }
+    if (!/^https?:\/\/.+/.test(url)) {
+      errEl.textContent = currentLang === 'ar' ? 'الرابط يجب أن يبدأ بـ http:// أو https://' : 'URL must start with http:// or https://';
+      errEl.style.display = 'block';
+      return;
+    }
+    if (url.endsWith('/')) url = url.slice(0, -1);
+    errEl.style.display = 'none';
+
+    const origText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = currentLang === 'ar' ? 'جارٍ فحص الاتصال...' : 'Testing connection...';
+
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 8000);
+      const res = await fetch(url + '/api/auth/setup-status', {
+        method: 'GET',
+        signal: controller.signal,
+        headers: { 'Accept': 'application/json' }
+      });
+      clearTimeout(timeout);
+      if (!res.ok && res.status !== 401) throw new Error('status ' + res.status);
+    } catch (e) {
+      btn.disabled = false;
+      btn.textContent = origText;
+      errEl.textContent = currentLang === 'ar'
+        ? 'تعذر الاتصال بالخادم. تأكد من أن الجهاز والخادم على نفس الشبكة وأن الخادم يعمل.'
+        : 'Cannot reach the server. Make sure the device and server are on the same network.';
+      errEl.style.display = 'block';
+      return;
+    }
+
+    await CapDetect.requestStoragePermission();
+    CapDetect.setServerUrl(url);
+    window.location.reload();
+  };
+  return true;
 }

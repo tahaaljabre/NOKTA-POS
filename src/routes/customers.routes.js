@@ -50,7 +50,7 @@ router.post('/', requirePermission('customers'), (req, res) => {
 router.put('/:id', requirePermission('customers'), (req, res) => {
   const { name, phone, email, address, delivery_notes, attributes } = req.body;
   const attrStr = attributes !== undefined ? (typeof attributes === 'object' ? JSON.stringify(attributes) : attributes) : null;
-  db.prepare(`
+  const result = db.prepare(`
     UPDATE customers
     SET name=COALESCE(?, name),
         phone=COALESCE(?, phone),
@@ -61,6 +61,7 @@ router.put('/:id', requirePermission('customers'), (req, res) => {
     WHERE id=?
   `).run(name, phone, email, address, delivery_notes, attrStr, req.params.id);
 
+  if (result.changes === 0) return res.status(404).json({ error: 'Customer not found' });
   res.json({ ok: true });
 });
 

@@ -12,6 +12,9 @@ function activateAdminTab(tab) {
     'modifiers-admin': 'loadModifiersAdmin',
     'inventory-admin': 'loadInventory',
     'employees-admin': 'loadEmployeesAdmin',
+    'cashiers-admin': 'loadCashiersAdmin',
+    'suppliers-admin': 'loadSuppliersAdmin',
+    'expenses-admin': 'loadExpensesAdmin',
     'tables-admin': 'loadTablesAdmin',
     'daily-closing-admin': 'loadDailyClosing',
     'audit-admin': 'loadAuditAdmin',
@@ -28,6 +31,8 @@ function setupAdmin() {
   bind('btn-add-item', openItemModal);
   bind('btn-add-modifier', openModifierAdminModal);
   bind('btn-add-employee', openEmployeeModal);
+  if (typeof setupCashiersAdmin === 'function') setupCashiersAdmin();
+  if (typeof setupSuppliersAdmin === 'function') setupSuppliersAdmin();
   bind('btn-add-table-admin', openTableAdminModal);
   bind('btn-save-settings', saveSettings);
   const loadRepBtn = document.getElementById('btn-load-report');
@@ -47,7 +52,7 @@ document.addEventListener('click', event => {
 
 function applyAdminPermissions() {
   if (!currentUser) return;
-  const p = currentUser.permissions;
+  const p = typeof currentUser.permissions === 'string' ? JSON.parse(currentUser.permissions) : (currentUser.permissions || {});
   const isAdmin = currentUser.role === 'admin';
   
   document.querySelectorAll('.admin-tab').forEach(tab => {
@@ -55,11 +60,17 @@ function applyAdminPermissions() {
     let show = true;
     if (admin === 'menu-admin' && !isAdmin && !p.menu) show = false;
     if (admin === 'modifiers-admin' && !isAdmin && !p.menu) show = false;
+    if (admin === 'inventory-admin' && !isAdmin && !p.inventory) show = false;
     if (admin === 'employees-admin' && !isAdmin && !p.employees) show = false;
+    if (admin === 'cashiers-admin' && !isAdmin && !p.cashiers) show = false;
+    if (admin === 'suppliers-admin' && !isAdmin && !p.manage_suppliers && !p.manage_payments) show = false;
+    if (admin === 'expenses-admin' && !isAdmin && !p.manage_expenses) show = false;
+    if (admin === 'attendance-admin' && !isAdmin && !p.attendance) show = false;
     if (admin === 'tables-admin' && !isAdmin && !p.menu) show = false;
     if (admin === 'daily-closing-admin' && !isAdmin && !p.daily_closing) show = false;
     if (admin === 'audit-admin' && !isAdmin && !p.audit) show = false;
     if (admin === 'settings-admin' && !isAdmin && !p.settings) show = false;
+    if (admin === 'backup-admin' && !isAdmin && !p.backup) show = false;
     if (admin === 'reports-admin' && !isAdmin && !p.reports) show = false;
     
     tab.style.display = show ? '' : 'none';
@@ -69,7 +80,7 @@ function applyAdminPermissions() {
   document.querySelectorAll('.nav-btn').forEach(btn => {
     const view = btn.dataset.view;
     let show = true;
-    if (view === 'admin' && !isAdmin && !p.settings && !p.menu && !p.audit && !p.employees) show = false;
+    if (view === 'admin' && !isAdmin && !p.admin) show = false;
     if (view === 'invoices' && !isAdmin && !p.view_invoices && !p.reports) show = false;
     if (view === 'sales' && !isAdmin && !p.reports) show = false;
     btn.style.display = show ? '' : 'none';

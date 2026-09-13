@@ -110,3 +110,76 @@ async function restoreBackup() {
     toast(currentLang === 'ar' ? 'خطأ في الاستعادة' : 'Restore failed', 'error');
   }
 }
+
+// ===== Menu Export/Import =====
+async function exportMenuExcel() {
+  try {
+    toast(currentLang === 'ar' ? 'جاري تصدير المنيو...' : 'Exporting menu...', 'info');
+    const response = await fetch(`${API_BASE}/api/menu/export`, {
+      headers: { Authorization: `Bearer ${currentUser?.token || ''}` },
+      cache: 'no-store'
+    });
+    if (!response.ok) throw new Error('Export failed');
+    const blob = await response.blob();
+    const disposition = response.headers.get('content-disposition') || '';
+    const filename = disposition.match(/filename="?([^";]+)"?/i)?.[1] || `nokta-menu-${new Date().toISOString().slice(0,10)}.xlsx`;
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    toast(currentLang === 'ar' ? '✅ تم تصدير المنيو' : '✅ Menu exported', 'success');
+  } catch (e) {
+    toast(currentLang === 'ar' ? 'خطأ في تصدير المنيو' : 'Menu export failed', 'error');
+  }
+}
+
+async function importMenuExcel(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const confirmMsg = currentLang === 'ar'
+    ? '⚠️ سيتم استيراد الأصناف والأقسام من الملف. هل تريد المتابعة؟'
+    : '⚠️ Items and categories will be imported from the file. Continue?';
+  if (!confirm(confirmMsg)) { input.value = ''; return; }
+
+  const resultDiv = document.getElementById('menu-import-result');
+  try {
+    toast(currentLang === 'ar' ? 'جاري الاستيراد...' : 'Importing...', 'info');
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await fetch(`${API_BASE}/api/menu/import`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${currentUser?.token || ''}` },
+      body: formData
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Import failed');
+
+    const parts = [];
+    if (result.categories) parts.push(`${currentLang === 'ar' ? 'أقسام' : 'Categories'}: ${result.categories}`);
+    if (result.items) parts.push(`${currentLang === 'ar' ? 'أصناف' : 'Items'}: ${result.items}`);
+    if (result.modifiers) parts.push(`${currentLang === 'ar' ? 'إضافات' : 'Modifiers'}: ${result.modifiers}`);
+
+    let html = `<strong style="color:#27ae60;">✅ ${currentLang === 'ar' ? 'تم الاستيراد بنجاح' : 'Import successful'}</strong><br>${parts.join(' | ')}`;
+    if (result.errors && result.errors.length) {
+      html += `<br><span style="color:#e74c3c;">⚠️ ${result.errors.length} ${currentLang === 'ar' ? 'أخطاء' : 'errors'}:</span><br>`;
+      html += result.errors.slice(0, 5).map(e => `• ${escapeHtml(e)}`).join('<br>');
+      if (result.errors.length > 5) html += `<br>... +${result.errors.length - 5}`;
+    }
+    resultDiv.innerHTML = html;
+    resultDiv.style.display = 'block';
+    resultDiv.style.background = result.errors?.length ? '#fff3cd' : '#d4edda';
+    resultDiv.style.border = `1px solid ${result.errors?.length ? '#ffc107' : '#28a745'}`;
+    toast(currentLang === 'ar' ? '✅ تم استيراد المنيو' : '✅ Menu imported', 'success');
+  } catch (e) {
+    resultDiv.innerHTML = `<strong style="color:#e74c3c;">❌ ${escapeHtml(e.message)}</strong>`;
+    resultDiv.style.display = 'block';
+    resultDiv.style.background = '#f8d7da';
+    resultDiv.style.border = '1px solid #f5c6cb';
+    toast(currentLang === 'ar' ? 'خطأ في الاستيراد' : 'Import failed', 'error');
+  }
+  input.value = '';
+}

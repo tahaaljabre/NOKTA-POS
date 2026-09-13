@@ -2,13 +2,35 @@ const express = require('express');
 const router = express.Router();
 const { db } = require('../database/db');
 const { logAudit } = require('../middleware/audit.middleware');
-const { getRequesterInfo, requirePermission } = require('../middleware/auth.middleware');
+const { getRequesterInfo, requireAdmin } = require('../middleware/auth.middleware');
 const { requireAuthenticated } = require('../middleware/auth.middleware');
 const config = require('../config/app.config');
 const path = require('path');
 const { createDatabaseBackup } = require('../services/automatic-backup');
 router.use(requireAuthenticated);
 const {dayOf,range,validDay}=require('../services/business-time');
+const { platformBreakdown } = require('../services/delivery-closing');
+const { forDay: shopExpensesForDay } = require('../services/expenses.service');
+
+router.post('/:id/approve', (req, res) => {
+  if (req.currentUser.role !== 'admin') return res.status(403).json({ error: 'للمدير فقط / Administrator only' });
+  const row = db.prepare('SELECT * FROM daily_closings WHERE id=?').get(req.params.id);
+  if (!row) return res.status(404).json({ error: 'الإغلاق غير موجود / Closing not found' });
+  db.prepare("UPDATE daily_closings SET approved_by=?, approved_at=datetime('now') WHERE id=?").run(req.currentUser.id, row.id);
+  logAudit(req.currentUser.id, req.currentUser.name, 'approve_closing', 'daily_closing', row.id, 'Approved daily closing');
+  res.json({ ok: true });
+});
+
+router.post('/:id/reopen', (req, res) => {
+  if (req.currentUser.role !== 'admin') return res.status(403).json({ error: 'للمدير فقط / Administrator only' });
+  const row = db.prepare('SELECT id, employee_id, date FROM daily_closings WHERE id=?').get(req.params.id);
+  if (!row) return res.status(404).json({ error: 'الإغلاق غير موجود / Closing not found' });
+  db.prepare("UPDATE daily_closings SET is_closed=0, approved_by=NULL, approved_at=NULL, notes=COALESCE(notes,'') || ' | Reopened by manager' WHERE id=?").run(row.id);
+  // Reopen the employee's corresponding shift so the cashier can correct it and close again.
+  db.prepare("UPDATE shifts SET status='open', closed_at=NULL WHERE employee_id=? AND status='closed' AND date(?)=date(COALESCE(closed_at, opened_at))").run(row.employee_id, row.date);
+  logAudit(req.currentUser.id, req.currentUser.name, 'reopen_closing', 'daily_closing', row.id, 'Reopened daily closing');
+  res.json({ ok: true });
+});
 
 router.get('/', (req, res) => {
   const requester = getRequesterInfo(req);
@@ -21,7 +43,7 @@ router.get('/', (req, res) => {
     employee_id = requester.id;
   }
 
-  let sql = 'SELECT * FROM daily_closings WHERE 1=1';
+  let sql = 'SELECT d.*, e.cashier_code FROM daily_closings d LEFT JOIN employees e ON e.id=d.employee_id WHERE 1=1';
   const p = [];
   if (date) { sql += ' AND date=?'; p.push(date); }
   if (employee_id) { sql += ' AND employee_id=?'; p.push(employee_id); }
@@ -39,6 +61,8 @@ router.get('/current-shift', (req, res) => {
   const empId = requester.id;
 
   const closing = db.prepare('SELECT * FROM daily_closings WHERE employee_id=? AND date=?').get(empId, date);
+  const cashSupplierExpenses = db.prepare("SELECT COALESCE(SUM(amount),0) total FROM supplier_transactions WHERE transaction_type='payment' AND payment_method='cash' AND transaction_date=? AND created_by=?").get(date, empId).total;
+  const cashShopExpenses = shopExpensesForDay(date, empId).cash;
   
   res.json({
     date,
@@ -46,13 +70,15 @@ router.get('/current-shift', (req, res) => {
     has_shift: !!closing,
     is_closed: closing ? (closing.is_closed === 1) : false,
     opening_cash: closing ? (closing.opening_cash || 0) : 0,
+    cash_supplier_expenses: cashSupplierExpenses,
+    cash_shop_expenses: cashShopExpenses,
     opened_at: closing ? closing.opened_at : null,
     closing_data: closing || null
   });
 });
 
 // Open / Start a shift for the employee with opening cash float
-router.post('/open', (req, res) => {
+router.post('/open', requireAdmin, (req, res) => {
   const requester = getRequesterInfo(req);
   if (!requester) return res.status(401).json({ error: 'Unauthorized' });
 
@@ -84,6 +110,9 @@ router.post('/open', (req, res) => {
 
 router.post('/close', (req, res) => {
   const { employee_id, date, notes, close_all } = req.body;
+  if (typeof notes === 'string' && notes.length > 1000) return res.status(400).json({ error: 'ملاحظات الإغلاق طويلة جداً / Closing notes are too long' });
+  const countedCash = req.body.counted_cash === '' || req.body.counted_cash == null ? null : Number(req.body.counted_cash);
+  if (countedCash !== null && (!Number.isFinite(countedCash) || countedCash < 0)) return res.status(400).json({ error: 'الجرد النقدي غير صحيح / Invalid cash count' });
   const d = date || dayOf();
   const requester = getRequesterInfo(req);
 
@@ -97,7 +126,8 @@ router.post('/close', (req, res) => {
       WHERE (julianday(completed_at)>=julianday(?) AND julianday(completed_at)<julianday(?) AND status='completed' AND is_deleted=0)
     `).all(range(d).start, range(d).end);
     
-    let grandTotalRevenue = 0, grandTotalOrders = 0, grandCash = 0, grandPromptpay = 0, grandCard = 0, grandTruemoney = 0;
+    let grandTotalRevenue = 0, grandTotalOrders = 0, grandCash = 0, grandPromptpay = 0, grandCard = 0, grandTruemoney = 0, grandPlatform = 0;
+    const grandApps = {};
     
     for (const emp of activeEmployees) {
       const orders = db.prepare(`
@@ -106,6 +136,9 @@ router.post('/close', (req, res) => {
           AND (julianday(completed_at)>=julianday(?) AND julianday(completed_at)<julianday(?) AND status='completed' AND is_deleted=0)
       `).all(emp.employee_id, emp.employee_id, range(d).start, range(d).end);
       
+      const platform = platformBreakdown(orders);
+      grandPlatform += platform.total;
+      for (const [app, value] of Object.entries(platform.byApp)) grandApps[app] = Math.round(((grandApps[app] || 0) + value) * 100) / 100;
       let rev = 0, csh = 0, pp = 0, crd = 0, tm = 0;
       orders.forEach(o => {
         rev += o.total || 0;
@@ -136,14 +169,14 @@ router.post('/close', (req, res) => {
       if (existing) {
         db.prepare(`
           UPDATE daily_closings 
-          SET total_orders=?, total_revenue=?, cash_total=?, promptpay_total=?, card_total=?, truemoney_total=?, is_closed=1, closed_at=datetime(\'now\'), notes=?
+          SET total_orders=?, total_revenue=?, cash_total=?, promptpay_total=?, card_total=?, truemoney_total=?, platform_total=?, platform_breakdown=?, is_closed=1, closed_at=datetime(\'now\'), notes=?
           WHERE id=?
-        `).run([orders.length, rev, csh, pp, crd, tm, notes || 'إغلاق كلي عبر الإدارة', existing.id]);
+        `).run([orders.length, rev, csh, pp, crd, tm, platform.total, JSON.stringify(platform.byApp), notes || 'إغلاق كلي عبر الإدارة', existing.id]);
       } else {
         db.prepare(`
-          INSERT INTO daily_closings (employee_id, employee_name, date, total_orders, total_revenue, cash_total, promptpay_total, card_total, truemoney_total, is_closed, closed_at, notes)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, datetime(\'now\'), ?)
-        `).run([emp.employee_id, emp.employee_name, d, orders.length, rev, csh, pp, crd, tm, notes || 'إغلاق كلي عبر الإدارة']);
+          INSERT INTO daily_closings (employee_id, employee_name, date, total_orders, total_revenue, cash_total, promptpay_total, card_total, truemoney_total, platform_total, platform_breakdown, is_closed, closed_at, notes)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, datetime(\'now\'), ?)
+        `).run([emp.employee_id, emp.employee_name, d, orders.length, rev, csh, pp, crd, tm, platform.total, JSON.stringify(platform.byApp), notes || 'إغلاق كلي عبر الإدارة']);
       }
     }
 
@@ -172,6 +205,8 @@ router.post('/close', (req, res) => {
       promptpay_total: grandPromptpay,
       card_total: grandCard,
       truemoney_total: grandTruemoney,
+      platform_total: grandPlatform,
+      platform_breakdown: grandApps,
       employee_count: activeEmployees.length,
       backup_created: config.dbPath === ':memory:' ? null : Boolean(backupFile),
       backup_file: backupFile ? path.basename(backupFile) : null,
@@ -188,6 +223,7 @@ router.post('/close', (req, res) => {
 
   // Calculate stats
   const orders = db.prepare("SELECT * FROM orders WHERE employee_id=? AND (julianday(completed_at)>=julianday(?) AND julianday(completed_at)<julianday(?) AND status='completed' AND is_deleted=0)").all(empId, range(d).start, range(d).end);
+  const platform = platformBreakdown(orders);
   let totalRevenue = 0, cashTotal = 0, promptpayTotal = 0, cardTotal = 0, truemoneyTotal = 0;
   orders.forEach(o => {
     totalRevenue += o.total || 0;
@@ -209,18 +245,18 @@ router.post('/close', (req, res) => {
   if (existingOpen) {
     db.prepare(`
       UPDATE daily_closings 
-      SET total_orders=?, total_revenue=?, cash_total=?, promptpay_total=?, card_total=?, truemoney_total=?, is_closed=1, closed_at=datetime(\'now\'), notes=?
+      SET total_orders=?, total_revenue=?, cash_total=?, promptpay_total=?, card_total=?, truemoney_total=?, platform_total=?, platform_breakdown=?, counted_cash=?, is_closed=1, closed_at=datetime(\'now\'), notes=?
       WHERE id=?
-    `).run(orders.length, totalRevenue, cashTotal, promptpayTotal, cardTotal, truemoneyTotal, notes || '', existingOpen.id);
+    `).run(orders.length, totalRevenue, cashTotal, promptpayTotal, cardTotal, truemoneyTotal, platform.total, JSON.stringify(platform.byApp), countedCash, notes || '', existingOpen.id);
   } else {
     db.prepare(`
-      INSERT INTO daily_closings (employee_id, employee_name, date, total_orders, total_revenue, cash_total, promptpay_total, card_total, truemoney_total, is_closed, closed_at, notes)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, datetime(\'now\'), ?)
-    `).run(empId, emp.name, d, orders.length, totalRevenue, cashTotal, promptpayTotal, cardTotal, truemoneyTotal, notes || '');
+      INSERT INTO daily_closings (employee_id, employee_name, date, total_orders, total_revenue, cash_total, promptpay_total, card_total, truemoney_total, platform_total, platform_breakdown, counted_cash, is_closed, closed_at, notes)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, datetime(\'now\'), ?)
+    `).run(empId, emp.name, d, orders.length, totalRevenue, cashTotal, promptpayTotal, cardTotal, truemoneyTotal, platform.total, JSON.stringify(platform.byApp), countedCash, notes || '');
   }
 
   logAudit(empId, emp.name, 'daily_closing', 'daily_closing', 0, `Daily closing for ${d}: ${orders.length} orders, ${totalRevenue.toFixed(2)}`);
-  res.json({ ok: true, total_orders: orders.length, total_revenue: totalRevenue, cash_total: cashTotal, promptpay_total: promptpayTotal, card_total: cardTotal, truemoney_total: truemoneyTotal });
+  res.json({ ok: true, total_orders: orders.length, total_revenue: totalRevenue, cash_total: cashTotal, promptpay_total: promptpayTotal, card_total: cardTotal, truemoney_total: truemoneyTotal, platform_total: platform.total, platform_breakdown: platform.byApp, counted_cash: countedCash });
 });
 
 module.exports = router;

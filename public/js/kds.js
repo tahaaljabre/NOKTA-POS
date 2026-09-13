@@ -1,16 +1,7 @@
-function receiveKitchenSession() {
-  const hash = typeof location !== 'undefined' ? String(location.hash || '') : '';
-  const match = hash.match(/(?:^#|&)session=([^&]+)/);
-  const transferred = match ? decodeURIComponent(match[1]) : '';
-  if (transferred) {
-    localStorage.setItem('pos_kitchen_token', transferred);
-    if (typeof history !== 'undefined') history.replaceState(null, '', location.pathname + location.search);
-  }
-  return transferred || localStorage.getItem('pos_kitchen_token') || '';
-}
-const kitchenToken = receiveKitchenSession();
+const kitchenStorage = typeof sessionStorage === 'undefined' ? null : sessionStorage;
+let kitchenToken = kitchenStorage?.getItem('pos_kitchen_token') || '';
 // The API and real-time socket are both protected by the signed login token.
-const socket = io({ auth: { token: kitchenToken } });
+const socket = io({ autoConnect: false });
 let hasLoadedOrders = false;
 let knownOrderIds = new Set();
 
@@ -26,11 +17,45 @@ let kdsOrders = [];
 let audioContext;
 
 // Initialize
-document.addEventListener('DOMContentLoaded', () => {
+function receiveKitchenSession() {
+  if (kitchenToken) return Promise.resolve(kitchenToken);
+  if (window.Capacitor && window.Capacitor.isNative) {
+    const saved = kitchenStorage?.getItem('pos_kitchen_token');
+    if (saved) { kitchenToken = saved; return Promise.resolve(saved); }
+  }
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => reject(new Error('يرجى تسجيل الدخول من شاشة نقطة البيع أولاً')), 10000);
+    const receive = event => {
+      if (event.origin !== window.location.origin || event.data?.type !== 'nokta-kds:session' || typeof event.data.token !== 'string') return;
+      clearTimeout(timeout);
+      window.removeEventListener('message', receive);
+      kitchenToken = event.data.token;
+      kitchenStorage?.setItem('pos_kitchen_token', kitchenToken);
+      resolve(kitchenToken);
+    };
+    window.addEventListener('message', receive);
+    if (window.opener) window.opener.postMessage({ type: 'nokta-kds:ready' }, window.location.origin);
+  });
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
   if (typeof applyTranslations === 'function') applyTranslations();
   initClock();
-  fetchActiveOrders();
   initAudio();
+  if (window.Capacitor && window.Capacitor.isNative) {
+    const backBtn = document.getElementById('btn-back-kds');
+    if (backBtn) backBtn.style.display = 'inline-block';
+  }
+  try {
+    await receiveKitchenSession();
+    socket.auth = { token: kitchenToken };
+    socket.connect();
+    fetchActiveOrders();
+  } catch (error) {
+    const container = document.getElementById('kds-container');
+    if (container) container.textContent = error.message;
+    return;
+  }
   // A safety net for a temporary network interruption. Normal updates arrive
   // immediately through Socket.IO; this picks up anything missed after reconnect.
   setInterval(() => fetchActiveOrders(false), 10000);

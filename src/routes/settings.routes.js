@@ -8,7 +8,13 @@ router.use(requireAuthenticated);
 router.get('/', (req, res) => {
   const rows = db.prepare('SELECT key, value FROM settings').all();
   const settings = {};
-  rows.forEach(r => { settings[r.key] = r.value; });
+  const SENSITIVE_KEYS = ['printer_ip', 'printer_port', 'printers_config', 'tax_number', 'restaurant_phone', 'restaurant_address'];
+  const isAdmin = req.currentUser && req.currentUser.role === 'admin';
+  const hasSettingsPerm = req.currentUser && req.currentUser.permissions && req.currentUser.permissions.settings;
+  rows.forEach(r => {
+    if (!isAdmin && !hasSettingsPerm && SENSITIVE_KEYS.includes(r.key)) return;
+    settings[r.key] = r.value;
+  });
   res.json(settings);
 });
 

@@ -12,6 +12,7 @@ try {
 }
 const net = require('net');
 const { db } = require('../database/db');
+const { createSystemDevice } = require('./system-print');
 
 function getSetting(key, defaultValue = '') {
   const row = db.prepare('SELECT value FROM settings WHERE key = ?').get(key);
@@ -140,6 +141,22 @@ async function getPrinter(printerConfigStr) {
         device = new escpos.USB(config.vendorId, config.productId);
       } else if (config.type === 'bluetooth' && escpos.Bluetooth) {
         device = new escpos.Bluetooth(config.address);
+      } else if (config.type === 'system') {
+        device = createSystemDevice(config.name);
+      } else if (config.device) {
+        let inner;
+        try { inner = JSON.parse(config.device); } catch (e) { inner = { type: 'network', address: config.device }; }
+        if (inner.type === 'network') {
+          device = new escpos.Network(inner.address, 9100);
+        } else if (inner.type === 'usb') {
+          device = new escpos.USB(inner.vendorId, inner.productId);
+        } else if (inner.type === 'bluetooth' && escpos.Bluetooth) {
+          device = new escpos.Bluetooth(inner.address);
+        } else if (inner.type === 'system') {
+          device = createSystemDevice(inner.name);
+        } else {
+          return reject(new Error('Unknown printer type'));
+        }
       } else {
         return reject(new Error('Unknown printer type'));
       }
@@ -156,7 +173,21 @@ async function getPrinter(printerConfigStr) {
 }
 
 async function printInvoice(orderId) {
-  const printerConfig = getSetting('printer_cashier');
+  let printerConfig = getSetting('printer_cashier');
+
+  if (!printerConfig) {
+    const printersConfigStr = getSetting('printers_config');
+    if (printersConfigStr) {
+      try {
+        const printersConfig = JSON.parse(printersConfigStr);
+        const cashierPrinter = printersConfig.find(p => !p.category_ids || p.category_ids.length === 0);
+        if (cashierPrinter && cashierPrinter.device) {
+          printerConfig = cashierPrinter.device;
+        }
+      } catch (e) {}
+    }
+  }
+
   if (!printerConfig) throw new Error('لم يتم إعداد طابعة الكاشير');
 
   const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(orderId);
@@ -175,112 +206,136 @@ async function printInvoice(orderId) {
 
   const { device, printer } = await getPrinter(printerConfig);
 
-  return new Promise((resolve, reject) => {
-    try {
-      printer
-        .align('ct')
-        .size(1, 1)
-        .text(restaurantName)
-        .text('')
-        .text(`Invoice #${order.invoice_number || order.id}`)
-        .text(`Date: ${new Date(order.created_at).toLocaleString('en-US')}`)
-        .text(`Cashier: ${order.employee_name || 'Admin'}`)
-        .text('--------------------------------')
-        .align('lt');
+  try {
+    printer
+      .align('ct')
+      .size(1, 1)
+      .text(restaurantName)
+      .text('')
+      .text(`Invoice #${order.invoice_number || order.id}`)
+      .text(`Date: ${new Date(order.created_at).toLocaleString('en-US')}`)
+      .text(`Cashier: ${order.employee_name || 'Admin'}`)
+      .text('--------------------------------')
+      .align('lt');
 
-      for (const item of items) {
-        const lineItemName = item.name || item.name_en || 'Item';
-        printer.text(`${item.quantity}x ${lineItemName}`);
-        
-        let mods = [];
-        try { mods = JSON.parse(item.selected_modifiers || '[]'); } catch (e) {}
-        
-        for (const mod of mods) {
-            printer.text(`   + ${mod.name}`);
-        }
-        
-        const lineTotal = item.price * item.quantity;
-        printer.align('rt').text(`${lineTotal.toFixed(2)} ${currency}`).align('lt');
+    for (const item of items) {
+      const lineItemName = item.name || item.name_en || 'Item';
+      printer.text(`${item.quantity}x ${lineItemName}`);
+      
+      let mods = [];
+      try { mods = JSON.parse(item.selected_modifiers || '[]'); } catch (e) {}
+      
+      for (const mod of mods) {
+          printer.text(`   + ${mod.name}`);
       }
-
-      printer
-        .text('--------------------------------')
-        .align('rt')
-        .text(`Subtotal: ${order.subtotal.toFixed(2)} ${currency}`);
-        
-      if (order.discount_amount > 0) printer.text(`Discount: -${order.discount_amount.toFixed(2)} ${currency}`);
-      if (order.tax_amount > 0) printer.text(`Tax: ${order.tax_amount.toFixed(2)} ${currency}`);
-
-      printer
-        .size(1, 1)
-        .text(`Total: ${order.total.toFixed(2)} ${currency}`)
-        .size(0, 0)
-        .align('ct')
-        .text('')
-        .text(footer);
-        
-      // Open cash drawer (Command 0, 1 or 2 depending on printer, we use 0)
-      printer.cashdraw(2);
-
-      printer.cut().close();
-      resolve(true);
-    } catch (err) {
-      if (device) device.close();
-      reject(err);
+      
+      const lineTotal = item.price * item.quantity;
+      printer.align('rt').text(`${lineTotal.toFixed(2)} ${currency}`).align('lt');
     }
-  });
+
+    printer
+      .text('--------------------------------')
+      .align('rt')
+      .text(`Subtotal: ${order.subtotal.toFixed(2)} ${currency}`);
+      
+    if (order.discount_amount > 0) printer.text(`Discount: -${order.discount_amount.toFixed(2)} ${currency}`);
+    if (order.tax_amount > 0) printer.text(`Tax: ${order.tax_amount.toFixed(2)} ${currency}`);
+
+    printer
+      .size(1, 1)
+      .text(`Total: ${order.total.toFixed(2)} ${currency}`)
+      .size(0, 0)
+      .align('ct')
+      .text('')
+      .text(footer);
+      
+    printer.cashdraw(2);
+
+    await printer.cut().close();
+    return true;
+  } catch (err) {
+    try { device.close(); } catch (e) {}
+    throw err;
+  }
 }
 
 async function printKitchen(orderId) {
-  const printerConfig = getSetting('printer_kitchen');
-  if (!printerConfig) throw new Error('لم يتم إعداد طابعة المطبخ');
+  const printersConfigStr = getSetting('printers_config');
+  if (!printersConfigStr) throw new Error('لم يتم إعداد طابعات المطبخ');
+  
+  let printersConfig = [];
+  try {
+    printersConfig = JSON.parse(printersConfigStr);
+  } catch (e) {
+    throw new Error('إعدادات طابعات المطبخ غير صالحة');
+  }
 
   const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(orderId);
   if (!order) throw new Error('الطلب غير موجود');
 
   const items = db.prepare(`
-    SELECT oi.*, i.name, i.name_en
+    SELECT oi.*, i.name, i.name_en, i.category_id
     FROM order_items oi
     LEFT JOIN items i ON oi.item_id = i.id
     WHERE oi.order_id = ?
   `).all(orderId);
 
-  const { device, printer } = await getPrinter(printerConfig);
+  let printedCount = 0;
 
-  return new Promise((resolve, reject) => {
+  for (const pConfig of printersConfig) {
+    if (!pConfig.auto_print || !Array.isArray(pConfig.category_ids) || !pConfig.category_ids.length) continue;
+    
+    const categoryIds = new Set(pConfig.category_ids.map(Number));
+    const printerItems = items.filter(item => categoryIds.has(Number(item.category_id)));
+    
+    if (printerItems.length === 0) continue;
+
     try {
-      printer
-        .align('ct')
-        .size(2, 2)
-        .text(`Order #${order.invoice_number || order.id}`)
-        .size(1, 1)
-        .text(`Table: ${order.table_id ? order.table_id : 'Takeaway'}`)
-        .text(`Time: ${new Date(order.created_at).toLocaleTimeString('en-US')}`)
-        .text('--------------------------------')
-        .align('lt');
+      const { device, printer } = await getPrinter(JSON.stringify(pConfig));
+      
+      try {
+        printer
+          .align('ct')
+          .size(2, 2)
+          .text(`Order #${order.invoice_number || order.id}`)
+          .size(1, 1)
+          .text(`Station: ${pConfig.name}`)
+          .text(`Table: ${order.table_id ? order.table_id : 'Takeaway'}`)
+          .text(`Time: ${new Date(order.created_at).toLocaleTimeString('en-US')}`)
+          .text('--------------------------------')
+          .align('lt');
 
-      for (const item of items) {
-        printer.size(1, 1).text(`[ ] ${item.quantity}x ${item.name || 'Item'}`);
-        
-        let mods = [];
-        try { mods = JSON.parse(item.selected_modifiers || '[]'); } catch (e) {}
-        
-        printer.size(0, 0);
-        for (const mod of mods) {
-            printer.text(`   + ${mod.name}`);
+        for (const item of printerItems) {
+          printer.size(1, 1).text(`[ ] ${item.quantity}x ${item.name || 'Item'}`);
+          
+          let mods = [];
+          try { mods = JSON.parse(item.selected_modifiers || '[]'); } catch (e) {}
+          
+          printer.size(0, 0);
+          for (const mod of mods) {
+              printer.text(`   + ${mod.name}`);
+          }
+          
+          if (item.note) printer.text(`   * Note: ${item.note}`);
+          printer.text(''); 
         }
-        
-        if (item.note) printer.text(`   * Note: ${item.note}`);
-        printer.text(''); 
-      }
 
-      printer.cut().close();
-      resolve(true);
-    } catch (err) {
-      if (device) device.close();
-      reject(err);
+        await printer.cut().close();
+        printedCount++;
+      } catch (err) {
+        try { device.close(); } catch (e) {}
+        throw err;
+      }
+    } catch (e) {
+      console.error(`Failed to print to kitchen printer ${pConfig.name}:`, e);
+      // Continue to next printer even if one fails
     }
-  });
+  }
+  
+  if (printedCount === 0) {
+    console.log('No kitchen tickets needed (categories did not match any printer).');
+  }
+  return true;
 }
 
 async function testPrinter(printerConfigStr) {

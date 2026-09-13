@@ -1,11 +1,15 @@
 // Socket.IO updates and offline-order synchronization.
 // ===== Socket Real-Time Concurrency Broadcasts =====
-const socket = io({ autoConnect: false });
-socket.on('connect', () => {
-  document.getElementById('sync-status').className = 'sync-status online';
-});
-socket.on('disconnect', () => {
-});
+const socket = typeof io !== 'undefined'
+  ? io({ autoConnect: false })
+  : { auth: {}, on: () => {}, connect: () => {}, disconnect: () => {} };
+if (typeof io !== 'undefined') {
+  socket.on('connect', () => {
+    document.getElementById('sync-status').className = 'sync-status online';
+  });
+  socket.on('disconnect', () => {
+  });
+}
 
 // Real-time table occupation and release across cashiers & waiters
 socket.on('table:updated', (data) => {

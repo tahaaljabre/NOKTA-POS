@@ -1,0 +1,196 @@
+/* ===== Dashboard / Analytics Panel ===== */
+
+/* منطقة التمرير الرئيسية للوحة — تحل مشكلة عدم التمرير */
+.dashboard-scroll-area {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  padding: 20px 24px 40px;
+}
+
+/* ===== فترة التقرير ===== */
+.dashboard-range-presets {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  background: var(--bg-subtle, var(--bg));
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+}
+
+.dashboard-range-btn {
+  border: 0;
+  border-radius: var(--radius-pill);
+  padding: 7px 14px;
+  background: transparent;
+  color: var(--text-light);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.18s, color 0.18s;
+}
+
+.dashboard-range-btn.active,
+.dashboard-range-btn:hover {
+  background: var(--primary);
+  color: #fff;
+}
+
+/* ===== Hero Banner ===== */
+.dashboard-hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  padding: 22px 26px;
+  margin-bottom: 20px;
+  color: #fff;
+  border-radius: var(--radius-lg);
+  background: linear-gradient(120deg, #3e070e 0%, #721c24 58%, #9b3442 100%);
+  box-shadow: var(--shadow-lg, 0 4px 24px rgba(62,7,14,.25));
+}
+
+.dashboard-eyebrow {
+  display: block;
+  margin-bottom: 5px;
+  color: #e9c879;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+}
+
+.dashboard-hero h2 { margin: 0; font-size: 20px; font-weight: 700; }
+.dashboard-hero p  { margin: 6px 0 0; color: rgba(255,255,255,.72); font-size: 12px; }
+
+.dashboard-live-mark {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: rgba(255,255,255,.78);
+  font-size: 11px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.dashboard-live-mark span:first-child {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #73e0ad;
+  box-shadow: 0 0 0 4px rgba(115,224,173,.2);
+  animation: dash-pulse 2s infinite;
+}
+
+@keyframes dash-pulse {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(115,224,173,.2); }
+  50%       { box-shadow: 0 0 0 6px rgba(115,224,173,.08); }
+}
+
+/* ===== بطاقات KPI ===== */
+.dashboard-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 22px;
+}
+
+.dashboard-kpi {
+  position: relative;
+  overflow: hidden;
+  min-height: 110px;
+  padding: 16px 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+  box-shadow: var(--shadow, 0 1px 6px rgba(0,0,0,.06));
+  transition: transform 0.18s, box-shadow 0.18s;
+}
+
+.dashboard-kpi:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0,0,0,.1);
+}
+
+/* دائرة الزخرفة الخلفية */
+.dashboard-kpi::after {
+  position: absolute;
+  content: '';
+  width: 70px;
+  height: 70px;
+  inset-inline-end: -18px;
+  bottom: -24px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: .07;
+  pointer-events: none;
+}
+
+.dashboard-kpi span  { display: block; color: var(--text-light); font-size: 11.5px; font-weight: 700; margin-bottom: 4px; }
+.dashboard-kpi strong { display: block; margin: 8px 0 5px; color: var(--text); font-size: 20px; line-height: 1.15; font-weight: 700; }
+.dashboard-kpi small  { display: block; color: var(--text-muted, var(--text-light)); font-size: 11px; }
+
+.dashboard-kpi-total   { color: var(--primary); }
+.dashboard-kpi-cash    { color: var(--success, #167653); }
+.dashboard-kpi-network { color: #2874b2; }
+.dashboard-kpi-delivery{ color: var(--gold-hover, #b58b22); }
+
+/* ===== شبكة الرسوم البيانية ===== */
+.dashboard-charts-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.dashboard-chart-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  box-shadow: var(--shadow, 0 1px 6px rgba(0,0,0,.06));
+  min-width: 0;
+}
+
+.dashboard-chart-card h3 {
+  margin: 0 0 14px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-light);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+/* تحديد ارتفاع Canvas — يحل مشكلة الدائرة الضخمة */
+.dashboard-chart-card canvas {
+  max-height: 260px !important;
+  width: 100% !important;
+}
+
+/* رسم بياني يمتد عرض الشبكة كاملاً */
+.dashboard-chart-card.full-width {
+  grid-column: 1 / -1;
+}
+
+.dashboard-chart-card.full-width canvas {
+  max-height: 220px !important;
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 1100px) {
+  .dashboard-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 900px) {
+  .dashboard-charts-grid { grid-template-columns: 1fr; }
+  .dashboard-chart-card.full-width { grid-column: auto; }
+  .dashboard-hero { align-items: flex-start; flex-direction: column; gap: 12px; }
+}
+
+@media (max-width: 600px) {
+  .dashboard-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .dashboard-scroll-area { padding: 12px 14px 32px; }
+  .dashboard-kpi strong { font-size: 17px; }
+}

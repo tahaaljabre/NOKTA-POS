@@ -10,6 +10,7 @@ router.get('/', (req, res) => {
     SELECT t.*, z.name as zone_name, z.name_en as zone_name_en 
     FROM "tables" t 
     LEFT JOIN table_zones z ON t.zone_id = z.id 
+    WHERE t.is_deleted = 0
     ORDER BY t.number
   `).all();
   res.json(rows);
@@ -45,7 +46,7 @@ router.put('/:id', requirePermission('tables'), (req, res) => {
 
 router.delete('/:id', requirePermission('tables'), (req, res) => {
   if(db.prepare("SELECT id FROM orders WHERE table_id=? AND status='active' AND is_deleted=0").get(req.params.id))return res.status(409).json({error:'الطاولة لها طلب نشط / Table has an active order'});
-  db.prepare('DELETE FROM "tables" WHERE id=?').run(req.params.id);
+  db.prepare('UPDATE "tables" SET is_deleted=1, status=\'empty\', current_order_id=NULL WHERE id=?').run(req.params.id);
   logAudit(req.headers['x-employee-id'], req.headers['x-employee-name'], 'delete', 'table', req.params.id, `Deleted table #${req.params.id}`);
   res.json({ ok: true });
 });

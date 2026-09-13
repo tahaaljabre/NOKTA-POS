@@ -22,7 +22,7 @@ async function loadServerNetworkInfo() {
                 <span style="color:#28a745;">●</span>
                 <strong>${ip.iface}:</strong>
                 <code style="background:rgba(0,0,0,0.05);padding:2px 6px;border-radius:4px;">${ip.url}</code>
-                <button type="button" class="btn" style="padding:2px 8px;font-size:11px;" onclick="copySpecificUrl('${ip.url}')">نسخ</button>
+                <button type="button" class="btn" style="padding:2px 8px;font-size:11px;" onclick="copySpecificUrl(this.dataset.url)" data-url="${escapeHtml(ip.url)}">نسخ</button>
               </div>
             `).join('')}
           </div>

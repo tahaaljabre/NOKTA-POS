@@ -42,7 +42,7 @@ async function createWindow() {
 
 app.whenReady().then(() => {
   // Keep packaged customer data outside the installation directory.
-  if (!process.env.POS_DATA_DIR) process.env.POS_DATA_DIR = path.join(app.getPath('userData'), 'data');
+  if (app.isPackaged && !process.env.POS_DATA_DIR) process.env.POS_DATA_DIR = path.join(app.getPath('userData'), 'data');
   // Windows lists USB, Bluetooth, and installed network printers together.
   // Expose only this read-only inventory to the renderer.
   ipcMain.handle('nokta:printers:list', async () => {

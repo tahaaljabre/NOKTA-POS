@@ -64,6 +64,17 @@ async function loadAdminReport() {
       </div>
     ` : ''}
 
+    ${report.by_delivery_app?.length ? `
+      <h3 style="margin-top:16px; margin-bottom:8px; color:var(--primary); font-size:15px;">${t('sales_by_delivery_app')}</h3>
+      <div class="closing-stats">
+        ${report.by_delivery_app.map(app => `<div class="report-stat">
+          <span>${escapeHtml(app.app_name)}</span>
+          <span class="stat-value">${Number(app.count) || 0} ${t('invoices_label')} · ${(Number(app.total) || 0).toFixed(2)} ${escapeHtml(currency)}</span>
+        </div>`).join('')}
+      </div>
+      <div class="report-stat"><span>${t('platform_receivable')}</span><span class="stat-value">${(Number(report.totals?.platform_receivable) || 0).toFixed(2)} ${escapeHtml(currency)}</span></div>
+    ` : ''}
+
     ${report.by_employee && report.by_employee.length > 0 ? `
       <h3 style="margin-top:16px; margin-bottom:8px; color:var(--primary); font-size:15px;">
         ${currentLang === 'ar' ? 'أداء ومبيعات الموظفين' : 'Employee Performance'}
@@ -90,7 +101,7 @@ async function loadAdminReport() {
 
 function printAdminReport() {
   if (typeof printSalesReport === 'function') {
-    printSalesReport();
+    printSalesReport('admin');
   }
 }
 

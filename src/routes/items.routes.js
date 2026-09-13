@@ -18,7 +18,7 @@ router.get('/', (req, res) => {
 });
 
 router.get('/all', (req, res) => {
-  const sql = 'SELECT i.*, c.name as category_name, c.name_en as category_name_en FROM items i LEFT JOIN categories c ON i.category_id=c.id ORDER BY i.id';
+  const sql = 'SELECT i.*, c.name as category_name, c.name_en as category_name_en FROM items i LEFT JOIN categories c ON i.category_id=c.id WHERE i.active=1 ORDER BY i.id';
   res.json(db.prepare(sql).all());
 });
 

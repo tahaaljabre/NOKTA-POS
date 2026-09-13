@@ -1,0 +1,14 @@
+/* ===== Luxury Burgundy & Milk Theme with Modern Polish ===== */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  height: 100dvh;
+  font-family: var(--font);
+  background-color: var(--bg);
+  color: var(--text);
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
+}

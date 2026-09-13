@@ -73,7 +73,7 @@ function renderMenuAdminCategoryFilter() {
     html += `
       <div class="admin-cat-pill-wrapper">
         <button type="button" class="admin-cat-pill ${isSelected ? 'active' : ''}" onclick="selectAdminCategory(${c.id})">
-          <span>${escapeHtml(c.icon || '📁')}</span> ${catName}
+          <span>${escapeHtml(c.icon || '📁')}</span> ${escapeHtml(catName)}
           <span class="cat-count-badge">${count}</span>
         </button>
         <button type="button" class="admin-cat-edit-btn" onclick="openCategoryModalById(${c.id})" title="تعديل القسم">
@@ -153,7 +153,7 @@ function filterMenuAdminTable() {
           ${i.name_en && currentLang === 'ar' ? `<div style="font-size:11px;color:var(--text-light);">${escapeHtml(i.name_en)}</div>` : ''}
         </td>
         <td>
-          <span class="cat-badge-pill">${catName}</span>
+          <span class="cat-badge-pill">${escapeHtml(catName)}</span>
         </td>
         <td>
           <div class="quick-price-wrap">

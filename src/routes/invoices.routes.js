@@ -8,6 +8,7 @@ router.get('/', requirePermission('view_invoices'), (req, res) => {
   const { date, employee_id, search, page, limit } = req.query;
   let sql = `SELECT o.*, t.number as table_number, t.name as table_name, c.name as customer_name FROM orders o LEFT JOIN "tables" t ON o.table_id=t.id LEFT JOIN customers c ON o.customer_id=c.id WHERE o.is_deleted=0 AND o.status IN ('completed','cancelled')`;
   const p = [];
+  if (req.currentUser.role !== 'admin' && req.currentUser.cashier_code) { sql += ' AND o.cashier_code=?'; p.push(req.currentUser.cashier_code); }
   if (date) { const r=require("../services/business-time").range(date);sql += " AND julianday(COALESCE(o.completed_at,o.created_at))>=julianday(?) AND julianday(COALESCE(o.completed_at,o.created_at))<julianday(?)";p.push(r.start,r.end); }
   if (employee_id) { sql += ' AND o.employee_id=?'; p.push(employee_id); }
   if (search) { sql += ' AND o.invoice_number=?'; p.push(parseInt(search)); }
@@ -19,6 +20,7 @@ router.get('/', requirePermission('view_invoices'), (req, res) => {
   sql += ` LIMIT ${lim} OFFSET ${off}`;
   
   const rows = db.prepare(sql).all(...p);
+  rows.forEach(o => { o.invoice_code = o.cashier_code ? `${o.cashier_code}-${o.invoice_number || o.id}` : String(o.invoice_number || o.id); });
   res.json({ orders: rows, total: total ? total.total : 0 });
 });
 

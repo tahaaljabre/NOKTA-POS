@@ -18,6 +18,8 @@ function setupNavigation() {
           else if (activeTab.dataset.admin === 'menu-admin') loadMenuAdmin();
           else if (activeTab.dataset.admin === 'employees-admin') loadEmployeesAdmin();
           else if (activeTab.dataset.admin === 'attendance-admin') loadAttendanceAdmin();
+          else if (activeTab.dataset.admin === 'suppliers-admin') loadSuppliersAdmin();
+          else if (activeTab.dataset.admin === 'expenses-admin') loadExpensesAdmin();
           else if (activeTab.dataset.admin === 'daily-closing-admin') loadDailyClosing();
           else if (activeTab.dataset.admin === 'settings-admin') loadSettings();
         }

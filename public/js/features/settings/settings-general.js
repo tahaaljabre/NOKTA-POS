@@ -16,9 +16,11 @@ async function loadSettings() {
   const timezoneInput=document.getElementById('set-business-timezone');if(timezoneInput)timezoneInput.value=s.business_timezone||'Asia/Bangkok';
   // Sync global currency state
   if (s.currency) {
+    const previousCurrency = appCurrency;
     appCurrency = s.currency;
     localStorage.setItem('pos_currency', s.currency);
     applyTranslations();
+    if (previousCurrency !== appCurrency && typeof loadSuppliersAdmin === 'function') loadSuppliersAdmin();
   }
   if (s.restaurant_name) {
     appRestaurantName = s.restaurant_name;
@@ -32,6 +34,11 @@ async function loadSettings() {
     appTaxRate = parseFloat(s.tax_rate) || 0;
     localStorage.setItem('pos_tax_rate', s.tax_rate);
   }
+  if (s.tax_type) {
+    appTaxType = s.tax_type;
+    localStorage.setItem('pos_tax_type', s.tax_type);
+  }
+  if (typeof updateOrderTotals === 'function') updateOrderTotals();
   if (typeof updateHeaderRestaurantName === 'function') updateHeaderRestaurantName();
 
   const el = id => document.getElementById(id);
@@ -185,6 +192,7 @@ async function saveSettings() {
     appCurrency = newCurrency;
     localStorage.setItem('pos_currency', newCurrency);
     applyTranslations();
+    if (typeof loadSuppliersAdmin === 'function') loadSuppliersAdmin();
     if (typeof loadMenuGrid === 'function') loadMenuGrid();
     if (typeof renderOrderItems === 'function') renderOrderItems();
     if (typeof loadActiveOrders === 'function') loadActiveOrders();

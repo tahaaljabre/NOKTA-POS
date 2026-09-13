@@ -1,4 +1,9 @@
 // ===== Invoices =====
+function invoiceDeliveryApp(order) {
+  let attributes = {};
+  try { attributes = typeof order.attributes === 'string' ? JSON.parse(order.attributes) : (order.attributes || {}); } catch {}
+  return attributes.delivery_app || attributes.delivery_app_id || '';
+}
 async function loadInvoices(page = 1) {
   const date = document.getElementById('invoice-date-filter')?.value || '';
   const empId = document.getElementById('invoice-employee-filter')?.value || '';
@@ -35,23 +40,21 @@ async function loadInvoices(page = 1) {
           <th>${currentLang === 'ar' ? 'إجراءات' : 'Actions'}</th>
         </tr></thead>
         <tbody>${data.orders.map(o => {
-          const payLabels = { cash: '💵', promptpay: '📱', truemoney: '💳', card: '💳' };
+          const payLabels = { cash: t('payment_cash'), promptpay: 'PromptPay', truemoney: 'TrueMoney', card: t('payment_card'), platform: t('platform_collection') };
           const typeLabels = { dine_in: t('dine_in'), takeaway: t('takeaway'), delivery: t('delivery') };
           const statusClass = o.status === 'completed' ? 'status-active' : 'status-inactive';
           const statusText = o.status === 'completed' ? (currentLang === 'ar' ? 'مكتمل' : 'Completed') : (currentLang === 'ar' ? 'ملغي' : 'Cancelled');
+          const canManage = currentUser?.role === 'admin' || !currentUser?.cashier_code || o.cashier_code === currentUser.cashier_code;
           return `<tr class="${o.is_deleted ? 'row-deleted' : ''}">
-            <td><strong>#${o.invoice_number || o.id}</strong></td>
+            <td><strong>#${escapeHtml(o.invoice_code || o.invoice_number || o.id)}</strong></td>
             <td style="font-size:11px;">${parsePOSDate(o.created_at).toLocaleString(currentLang === 'ar' ? 'ar-SA' : 'en-US')}</td>
-            <td>${typeLabels[o.type] || o.type}</td>
+            <td>${typeLabels[o.type] || o.type}${invoiceDeliveryApp(o) ? `<small style="display:block">${escapeHtml(invoiceDeliveryApp(o))}</small>` : ''}</td>
             <td>${o.table_number || '-'}</td>
             <td><strong>${(o.total || 0).toFixed(2)} ${escapeHtml(currency)}</strong></td>
-            <td>${escapeHtml(payLabels[o.payment_method] || '💵')}</td>
+            <td>${escapeHtml(payLabels[o.payment_method] || o.payment_method || '-')}</td>
             <td class="${statusClass}">${statusText}</td>
             <td class="action-btns">
-              <button class="btn-edit" onclick="printExistingOrder(${o.id})">🖨️ ${currentLang === 'ar' ? 'طباعة' : 'Print'}</button>
-              <button class="btn-edit" onclick="viewInvoice(${o.id})">${currentLang === 'ar' ? 'عرض' : 'View'}</button>
-              ${o.status === 'completed' && !o.is_deleted ? `<button class="btn-edit" onclick="editInvoice(${o.id})">${currentLang === 'ar' ? 'تعديل' : 'Edit'}</button>` : ''}
-              ${!o.is_deleted ? `<button class="btn-delete" onclick="deleteInvoice(${o.id})">${currentLang === 'ar' ? 'حذف' : 'Delete'}</button>` : ''}
+              ${canManage ? `<button class="btn-edit" onclick="printExistingOrder(${o.id})">🖨️ ${currentLang === 'ar' ? 'طباعة' : 'Print'}</button><button class="btn-edit" onclick="viewInvoice(${o.id})">${currentLang === 'ar' ? 'عرض' : 'View'}</button>${o.status === 'completed' && !o.is_deleted ? `<button class="btn-edit" onclick="editInvoice(${o.id})">${currentLang === 'ar' ? 'تعديل' : 'Edit'}</button>` : ''}${!o.is_deleted ? `<button class="btn-delete" onclick="deleteInvoice(${o.id})">${currentLang === 'ar' ? 'حذف' : 'Delete'}</button>` : ''}` : `<span class="admin-muted">${currentLang === 'ar' ? 'خاص بكاشير آخر' : 'Other cashier'}</span>`}
             </td>
           </tr>`;
         }).join('')}</tbody>
@@ -66,14 +69,15 @@ async function viewInvoice(id) {
   const s = await api('/api/settings');
   const currency = s.currency || '฿';
   const name = currentLang === 'ar' ? (s.restaurant_name || '') : (s.restaurant_name_en || s.restaurant_name || '');
-  const payLabels = { cash: t('payment_cash'), promptpay: t('payment_promptpay'), truemoney: t('payment_truemoney'), card: t('payment_card') };
+  const payLabels = { cash: t('payment_cash'), promptpay: t('payment_promptpay'), truemoney: t('payment_truemoney'), card: t('payment_card'), platform: t('platform_collection') };
 
-  openModal(`${currentLang === 'ar' ? 'فاتورة' : 'Invoice'} #${order.invoice_number || order.id}`, `
+  openModal(`${currentLang === 'ar' ? 'فاتورة' : 'Invoice'} #${escapeHtml(order.invoice_code || order.invoice_number || order.id)}`, `
     <div class="invoice-view">
       <p><strong>${escapeHtml(name)}</strong></p>
-      <p>${currentLang === 'ar' ? 'رقم الفاتورة' : 'Invoice #'}: <strong>${order.invoice_number || order.id}</strong></p>
+      <p>${currentLang === 'ar' ? 'رقم الفاتورة' : 'Invoice #'}: <strong>${escapeHtml(order.invoice_code || order.invoice_number || order.id)}</strong></p>
       <p>${currentLang === 'ar' ? 'التاريخ' : 'Date'}: ${parsePOSDate(order.created_at).toLocaleString(currentLang === 'ar' ? 'ar-SA' : 'en-US')}</p>
       <p>${currentLang === 'ar' ? 'النوع' : 'Type'}: ${order.type === 'dine_in' ? t('dine_in') : order.type === 'takeaway' ? t('takeaway') : t('delivery')}</p>
+      ${invoiceDeliveryApp(order) ? `<p>${t('delivery_apps')}: ${escapeHtml(invoiceDeliveryApp(order))}</p>` : ''}
       ${order.table_number ? `<p>${currentLang === 'ar' ? 'الطاولة' : 'Table'}: ${order.table_number}</p>` : ''}
       <p>${currentLang === 'ar' ? 'الموظف' : 'Employee'}: ${escapeHtml(order.employee_name || '-')}</p>
       <div class="line"></div>
@@ -149,6 +153,8 @@ async function editInvoice(id) {
 
   openModal(`${currentLang === 'ar' ? 'تعديل فاتورة' : 'Edit Invoice'} #${order.invoice_number || order.id}`, `
     <div id="edit-invoice-items"></div>
+    <label>${currentLang === 'ar' ? 'بحث سريع عن صنف' : 'Quick item search'}</label>
+    <input type="search" id="edit-item-search" placeholder="${currentLang === 'ar' ? 'اكتب اسم الصنف...' : 'Type item name...'}" autocomplete="off">
     <label>${currentLang === 'ar' ? 'إضافة صنف' : 'Add Item'}</label>
     <select id="edit-add-item">
       <option value="">-- ${currentLang === 'ar' ? 'اختر صنف' : 'Choose item'} --</option>
@@ -168,6 +174,14 @@ async function editInvoice(id) {
   renderEditItems();
 
   // Add item dropdown
+  const editSearch = document.getElementById('edit-item-search');
+  const editSelect = document.getElementById('edit-add-item');
+  if (editSearch && editSelect) editSearch.oninput = () => {
+    const q = editSearch.value.trim().toLowerCase();
+    [...editSelect.options].forEach((opt, index) => { if (index > 0) opt.hidden = !!q && !opt.textContent.toLowerCase().includes(q); });
+    const first = [...editSelect.options].find((opt, index) => index > 0 && !opt.hidden);
+    if (q && first) editSelect.value = first.value;
+  };
   document.getElementById('edit-add-item').onchange = (e) => {
     const itemId = parseInt(e.target.value);
     if (!itemId) return;

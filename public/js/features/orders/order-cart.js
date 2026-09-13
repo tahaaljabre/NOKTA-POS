@@ -82,6 +82,12 @@ function selectOrderType(type) {
   });
   currentOrder.type = type;
   if (currentOrder.attributes) delete currentOrder.attributes.delivery_app;
+  if (currentOrder.attributes) delete currentOrder.attributes.delivery_app_id;
+  if (currentOrder.payment_method === 'platform') {
+    currentOrder.payment_method = 'cash';
+    document.getElementById('btn-select-payment').textContent = t('payment_cash');
+    toggleCashCalculator(true);
+  }
 
   const deliveryButton = document.querySelector('.btn-type[data-type="delivery"]');
   if (deliveryButton) {
@@ -99,13 +105,15 @@ function updateOrderTotals() {
   const disc = Math.round((subtotal * discPct) * 100) / 100;
   const afterDisc = subtotal - disc;
   
-  const taxPct = (appTaxRate || 0) / 100;
-  const taxAmt = Math.round((afterDisc * taxPct) * 100) / 100;
-  
-  const total = Math.round((afterDisc + taxAmt) * 100) / 100;
+  const taxPct = (currentOrder.tax_percent ?? appTaxRate ?? 0) / 100;
+  const taxAmt = appTaxType === 'inclusive'
+    ? Math.round((afterDisc - afterDisc / (1 + taxPct)) * 100) / 100
+    : Math.round((afterDisc * taxPct) * 100) / 100;
+  const total = appTaxType === 'inclusive' ? afterDisc : Math.round((afterDisc + taxAmt) * 100) / 100;
 
   document.getElementById('order-subtotal').textContent = subtotal.toFixed(2);
   document.getElementById('order-discount-val').textContent = disc.toFixed(2);
+  document.getElementById('order-tax-val').textContent = taxAmt.toFixed(2);
   document.getElementById('order-total').textContent = total.toFixed(2);
   updateMobileCartBadge();
   calculateChange();
@@ -133,6 +141,7 @@ function resetOrder() {
   if (cashInput) cashInput.value = '';
   const paymentButton = document.getElementById('btn-select-payment');
   if (paymentButton) paymentButton.innerHTML = `💵 <span data-i18n="payment_cash">${t('payment_cash')}</span>`;
+  toggleCashCalculator(true);
   const chk = document.getElementById('chk-prepaid');
   if (chk) chk.checked = false;
   renderOrderItems();

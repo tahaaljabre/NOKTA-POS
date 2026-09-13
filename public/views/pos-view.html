@@ -36,6 +36,10 @@
           <div class="order-header">
             <div class="order-info">
               <span class="order-number" id="current-order-number" data-i18n="new_order">طلب جديد</span>
+              <div class="pos-invoice-loader">
+                <input id="pos-edit-invoice-number" type="search" inputmode="numeric" placeholder="رقم الفاتورة" data-i18n-placeholder="invoice_number_ph">
+                <button type="button" id="pos-edit-invoice-btn" class="btn btn-secondary">✏️ تعديل</button>
+              </div>
             </div>
             <div class="order-type-buttons">
               <button type="button" class="btn btn-type active" data-type="dine_in"><span class="type-icon">🍽️</span><span class="type-label" data-i18n="dine_in">داخل المطعم</span></button>
@@ -73,6 +77,7 @@
                 <input type="number" id="discount-input" value="0" min="0" max="100" class="discount-input">
                 <span id="order-discount-val">0</span> <span class="currency" data-i18n="currency">ريال</span>
               </div>
+              <div class="total-row"><span data-i18n="inv_tax">ضريبة</span><span id="order-tax-val">0.00</span> <span class="currency" data-i18n="currency">ريال</span></div>
               <div class="total-row grand-total"><span data-i18n="total">الإجمالي</span><span id="order-total">0</span>
                 <span class="currency" data-i18n="currency">ريال</span></div>
               <div class="total-row cash-calc-row" id="cash-calc-row">

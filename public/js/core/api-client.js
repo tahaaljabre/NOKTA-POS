@@ -1,6 +1,9 @@
 // Authenticated API client, pagination, and normalized network errors.
 // ===== API =====
-const API_BASE = (window.location.protocol === 'file:') ? 'http://localhost:3000' : '';
+let API_BASE = (window.location.protocol === 'file:') ? 'http://localhost:3000' : '';
+if (typeof CapDetect !== 'undefined' && CapDetect.isCapacitorNative()) {
+  API_BASE = CapDetect.getServerUrl();
+}
 
 async function api(url, method = 'GET', body = null) {
   const fullUrl = url.startsWith('http') ? url : (API_BASE + url);
@@ -14,6 +17,14 @@ async function api(url, method = 'GET', body = null) {
   isOnline=true;
   const contentType = res.headers.get('content-type') || '';
   if (!res.ok) {
+    if (res.status === 401) {
+      currentUser = null;
+      localStorage.removeItem('pos_token');
+      sessionStorage.removeItem('pos_kitchen_token');
+      sessionStorage.removeItem('pos_token');
+      window.location.reload();
+      throw new Error(currentLang === 'ar' ? 'انتهت الجلسة' : 'Session expired');
+    }
     let errMsg = `Error ${escapeHtml(res.status)}`;
     if (contentType.includes('application/json')) {
       const errJson = await res.json();

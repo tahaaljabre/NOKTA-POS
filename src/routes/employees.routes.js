@@ -28,7 +28,7 @@ router.get('/', (req, res) => {
   if (!requester) return res.status(401).json({ error: 'Unauthorized' });
 
   if (requester.role === 'admin' || requester.permissions.employees) {
-    const rows = db.prepare('SELECT id, name, name_en, username, role, permissions, phone, default_floor, default_station, active, max_discount, created_at FROM employees ORDER BY id').all();
+    const rows = db.prepare('SELECT id, name, name_en, username, role, permissions, phone, default_floor, default_station, cashier_code, active, max_discount, created_at FROM employees ORDER BY id').all();
     rows.forEach(r => {
       r.permissions = typeof r.permissions === 'string' ? JSON.parse(r.permissions || '{}') : (r.permissions || {});
     });
@@ -43,7 +43,7 @@ router.get('/', (req, res) => {
 // Admin-only endpoints for employee management
 // Admin-only endpoints for employee management
 router.post('/', requireAdmin, (req, res) => {
-  const { name, name_en, pin, username, password, role, permissions, phone, default_floor, default_station, max_discount } = req.body;
+  const { name, name_en, pin, username, password, role, permissions, phone, default_floor, default_station, cashier_code, max_discount } = req.body;
   if (!name || !pin) return res.status(400).json({ error: 'Name and PIN required' });
   if (name.length > 100) return res.status(400).json({ error: 'الاسم طويل جداً / Name too long (max 100 characters)' });
   if (name_en && name_en.length > 100) return res.status(400).json({ error: 'الاسم الإنجزي طويل جداً / English name too long (max 100 characters)' });
@@ -54,11 +54,12 @@ router.post('/', requireAdmin, (req, res) => {
 
   const floorVal = parseInt(default_floor) || 1;
   const stationVal = default_station || (role === 'waiter' ? 'waiter_mobile' : `cashier_floor${floorVal}`);
+  if (role === 'waiter' && cashier_code && !db.prepare('SELECT id FROM cashiers WHERE code=? AND active=1').get(String(cashier_code).trim().toUpperCase())) return res.status(400).json({ error: 'رمز الكاشير غير موجود / Cashier code not found' });
   const parsedMax = parseFloat(max_discount);
   const maxDiscountNew = Math.min(100, Math.max(0, isNaN(parsedMax) ? 100 : parsedMax));
 
-  const info = db.prepare('INSERT INTO employees (name, name_en, pin, username, password_hash, role, permissions, phone, default_floor, default_station, max_discount) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').run(
-    name, name_en || '', hashPin(pin), cleanUsername, password ? hashPin(password) : null, role || 'cashier', JSON.stringify(permissions || { pos: true }), phone || '', floorVal, stationVal, maxDiscountNew
+  const info = db.prepare('INSERT INTO employees (name, name_en, pin, username, password_hash, role, permissions, phone, default_floor, default_station, cashier_code, max_discount) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').run(
+    name, name_en || '', hashPin(pin), cleanUsername, password ? hashPin(password) : null, role || 'cashier', JSON.stringify(permissions || { pos: true }), phone || '', floorVal, stationVal, cashier_code || '', maxDiscountNew
   );
   logAudit(req.currentUser.id, req.currentUser.name, 'create', 'employee', info.lastInsertRowid, `Created Employee: ${name} (${role}) - Floor ${floorVal}`);
   res.json({ id: info.lastInsertRowid });
@@ -76,6 +77,7 @@ router.put('/:id', requireAdmin, (req, res) => {
   if (cleanUsername && !/^[a-z0-9._-]{3,32}$/.test(cleanUsername)) return res.status(400).json({ error: 'Invalid username' });
   if (password && (typeof password !== 'string' || password.length < 6)) return res.status(400).json({ error: 'Password must contain at least 6 characters' });
   const maxDiscountUpd = req.body.max_discount !== undefined ? Math.min(100, Math.max(0, parseFloat(req.body.max_discount) || 0)) : undefined;
+  if (req.body.cashier_code && !db.prepare('SELECT id FROM cashiers WHERE code=? AND active=1').get(String(req.body.cashier_code).trim().toUpperCase())) return res.status(400).json({ error: 'رمز الكاشير غير موجود / Cashier code not found' });
   if (pin) {
     db.prepare(`
       UPDATE employees 
@@ -119,6 +121,8 @@ router.put('/:id', requireAdmin, (req, res) => {
 
 router.delete('/:id', requireAdmin, (req, res) => {
   const targetId = parseInt(req.params.id);
+  const firstAdmin = db.prepare("SELECT id FROM employees WHERE role='admin' ORDER BY id ASC LIMIT 1").get();
+  if (firstAdmin && firstAdmin.id === targetId) return res.status(403).json({ error: 'لا يمكن حذف المدير الأول / The first administrator cannot be deleted' });
   if (targetId === req.currentUser.id) {
     return res.status(400).json({ error: 'لا يمكنك حذف حسابك الحالي أثناء تسجيل الدخول' });
   }

@@ -100,7 +100,7 @@ async function loadSalesReport() {
       </h3>
       <div class="closing-stats">
         ${report.by_payment.map(p => {
-          const labels = { cash: '💵 ' + t('payment_cash'), promptpay: '📱 ' + t('payment_promptpay'), truemoney: '💳 ' + t('payment_truemoney'), card: '💳 ' + t('payment_card') };
+          const labels = { cash: '💵 ' + t('payment_cash'), promptpay: '📱 ' + t('payment_promptpay'), truemoney: '💳 ' + t('payment_truemoney'), card: '💳 ' + t('payment_card'), platform: t('platform_collection') };
           return `
             <div class="report-stat">
               <span>${escapeHtml(labels[p.payment_method] || p.payment_method)}</span>
@@ -109,6 +109,13 @@ async function loadSalesReport() {
           `;
         }).join('')}
       </div>
+    ` : ''}
+
+    ${report.by_delivery_app?.length ? `
+      <h3 style="margin-top:18px;margin-bottom:10px;color:var(--primary);font-size:15px;">${t('sales_by_delivery_app')}</h3>
+      <div class="closing-stats">${report.by_delivery_app.map(a => `<div class="report-stat"><span>${escapeHtml(a.app_name)}</span><span class="stat-value">${a.count} · ${(a.total || 0).toFixed(2)} ${escapeHtml(currency)}</span></div>`).join('')}</div>
+      <div class="admin-muted">${t('platform_receivable')}: ${(report.totals.platform_receivable || 0).toFixed(2)} ${escapeHtml(currency)}</div>
+      ${report.totals.legacy_app_collection ? `<div class="admin-muted">${t('legacy_app_collection')}: ${report.totals.legacy_app_collection.toFixed(2)} ${escapeHtml(currency)}</div>` : ''}
     ` : ''}
 
     ${report.by_employee && report.by_employee.length > 0 ? `
@@ -131,6 +138,12 @@ async function loadSalesReport() {
           `).join('')}</tbody>
         </table>
       </div>
+    ` : ''}
+    ${report.by_cashier && report.by_cashier.length > 0 ? `
+      <h3 style="margin-top:18px;margin-bottom:10px;color:var(--primary);font-size:15px;">${currentLang === 'ar' ? 'المبيعات حسب الكاشير' : 'Sales by Cashier'}</h3>
+      <div class="invoices-table-wrapper"><table class="admin-table"><thead><tr><th>${currentLang === 'ar' ? 'رمز الكاشير' : 'Cashier code'}</th><th>${currentLang === 'ar' ? 'الفواتير' : 'Invoices'}</th><th>${currentLang === 'ar' ? 'الإجمالي' : 'Revenue'}</th></tr></thead><tbody>
+      ${report.by_cashier.map(c => `<tr><td><strong>${escapeHtml(c.cashier_code || (currentLang === 'ar' ? 'غير محدد' : 'Unassigned'))}</strong></td><td>${c.count}</td><td><strong>${(c.total || 0).toFixed(2)} ${escapeHtml(currency)}</strong></td></tr>`).join('')}
+      </tbody></table></div>
     ` : ''}
   `;
 }

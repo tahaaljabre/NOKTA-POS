@@ -1,5 +1,23 @@
 // Production ticket printing for kitchen and preparation stations.
 async function printProductionTickets(order, orderItems) {
+  if (order.id) {
+    try {
+      const res = await api(`/api/print/kitchen/${order.id}`, 'POST');
+      if (res && res.success) {
+        toast(currentLang === 'ar' ? 'تم إرسال طلبات المطبخ' : 'Kitchen tickets sent', 'success');
+        return;
+      }
+    } catch (e) {
+      if (e.message && e.message.includes('لم يتم إعداد')) {
+        console.warn('No kitchen printers configured, falling back to browser print.');
+      } else {
+        toast(currentLang === 'ar' ? 'فشل طباعة المطبخ: ' + e.message : 'Kitchen print failed: ' + e.message, 'error');
+        return;
+      }
+    }
+  }
+
+  // Fallback to HTML printing
   let settings = {};
   try { settings = await api('/api/settings'); } catch (error) { return; }
   let printerConfigs = [];

@@ -1,5 +1,9 @@
 // Customer receipt preview and printing.
 async function printOrder() {
+  if (typeof saveOrder === 'function') {
+    await saveOrder(true);
+    return;
+  }
   if (!currentOrder.items.length) {
     toast(currentLang === 'ar' ? 'أضف صنفاً قبل الطباعة' : 'Add items before printing', 'error');
     return;
@@ -14,6 +18,23 @@ async function printOrder() {
 }
 
 async function generateReceipt(order, targetPrinterType = 'cashier') {
+  if (order.id) {
+    try {
+      const res = await api(`/api/print/invoice/${order.id}`, 'POST');
+      if (res && res.success) {
+        toast(currentLang === 'ar' ? 'تم إرسال الفاتورة للطابعة (الكاشير)' : 'Invoice sent to cashier printer', 'success');
+        return;
+      }
+    } catch (e) {
+      if (e.message && e.message.includes('لم يتم إعداد')) {
+        console.warn('No cashier printer configured, falling back to browser print.');
+      } else {
+        toast(currentLang === 'ar' ? 'فشل الطباعة: ' + e.message : 'Print failed: ' + e.message, 'error');
+        return;
+      }
+    }
+  }
+
   let s = {};
   try { s = await api('/api/settings'); } catch(e) {}
   const currency = getCurrency();
@@ -31,9 +52,10 @@ async function generateReceipt(order, targetPrinterType = 'cashier') {
     card: currentLang === 'ar' ? '💳 بطاقة (Card)' : '💳 Card'
   };
   const payMethod = order.payment_method || 'cash';
+  paymentLabels.platform = t('platform_collection');
   const payList = (typeof paymentMethodsList !== 'undefined') ? paymentMethodsList : [];
   const foundPay = payList.find(x => x.id === payMethod);
-  const payLabel = foundPay ? foundPay.name : payMethod;
+  const payLabel = foundPay ? foundPay.name : (paymentLabels[payMethod] || payMethod);
 
   const typeLabels = {
     dine_in: currentLang === 'ar' ? 'محلي / جلوس' : 'Dine In',
@@ -41,7 +63,7 @@ async function generateReceipt(order, targetPrinterType = 'cashier') {
     delivery: currentLang === 'ar' ? 'توصيل / Delivery' : 'Delivery'
   };
 
-  const invoiceNo = order.invoice_number || order.id || '-';
+  const invoiceNo = order.invoice_code || order.invoice_number || order.id || '-';
   let orderType = typeLabels[order.type] || order.type || '';
   if (order.type === 'delivery') {
     let attrs = {};

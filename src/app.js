@@ -22,13 +22,17 @@ const printRoutes = require('./routes/print.routes');
 const syncRoutes = require('./routes/sync.routes');
 const backupRoutes = require('./routes/backup.routes');
 const attendanceRoutes = require('./routes/attendance.routes');
+const cashiersRoutes = require('./routes/cashiers.routes');
+const suppliersRoutes = require('./routes/suppliers.routes');
+const expensesRoutes = require('./routes/expenses.routes');
+const menuRoutes = require('./routes/menu.routes');
 const { requirePermission } = require('./middleware/auth.middleware');
 
 function createApp() {
   const app = express();
 
   // Basic Middlewares
-  app.use(cors({ origin: false }));
+  app.use(cors({ origin: true, credentials: true }));
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true, limit: '10mb' }));
   app.disable('x-powered-by');
@@ -50,10 +54,47 @@ function createApp() {
   // Security Headers against Clickjacking, MIME sniffing, and XSS
   app.use((req, res, next) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
-    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
     res.setHeader('X-XSS-Protection', '1; mode=block');
     res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
     res.setHeader('Referrer-Policy', 'same-origin');
+
+    const ua = (req.headers['user-agent'] || '').toLowerCase();
+    const isWebView = ua.includes('wv') || ua.includes('capacitor') || ua.includes('android');
+
+    if (isWebView) {
+      res.setHeader('X-Frame-Options', 'ALLOWALL');
+      res.setHeader(
+        'Content-Security-Policy',
+        [
+          "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: http: https: ws: wss:",
+          "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+          "style-src 'self' 'unsafe-inline'",
+          "img-src 'self' data: blob:",
+          "font-src 'self' data:",
+          "connect-src 'self' http: https: ws: wss:",
+          "frame-ancestors *",
+          "form-action 'self'",
+          "base-uri 'self'"
+        ].join('; ')
+      );
+    } else {
+      res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+      res.setHeader(
+        'Content-Security-Policy',
+        [
+          "default-src 'self'",
+          "script-src 'self' 'unsafe-inline'",
+          "style-src 'self' 'unsafe-inline'",
+          "img-src 'self' data: blob:",
+          "font-src 'self' data:",
+          "connect-src 'self' ws: wss:",
+          "frame-ancestors 'none'",
+          "form-action 'self'",
+          "base-uri 'self'"
+        ].join('; ')
+      );
+    }
+
     if (req.path === '/' || req.path === '/sw.js' || req.url.match(/\.(html|js|css)$/)) {
       res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
       res.setHeader('Pragma', 'no-cache');
@@ -99,6 +140,39 @@ function createApp() {
   // Serve static assets from public/
   app.use(express.static(config.publicDir));
 
+  // Intercept window.open and target=_blank in WebView
+  app.use((req, res, next) => {
+    const ua = (req.headers['user-agent'] || '').toLowerCase();
+    const isWebView = ua.includes('wv') || ua.includes('capacitor') || ua.includes('android');
+    if (!isWebView || !req.path.match(/\.html$/) && req.path !== '/') return next();
+
+    const originalSend = res.send.bind(res);
+    res.send = (body) => {
+      if (typeof body === 'string' && body.includes('</head>')) {
+        const interceptScript = `<script>
+(function(){
+  if(!window.AndroidBridge && !/capacitor/i.test(navigator.userAgent))return;
+  window.open=function(url,target){
+    if(url)window.location.href=url;
+    return null;
+  };
+  document.addEventListener('click',function(e){
+    var link=e.target.closest('a[target="_blank"]');
+    if(link&&link.href){e.preventDefault();window.location.href=link.href;}
+  },true);
+  document.addEventListener('submit',function(e){
+    var form=e.target;
+    if(form&&form.target==="_blank"){e.preventDefault();form.submit();}
+  },true);
+})();
+</script>`;
+        body = body.replace('</head>', interceptScript + '</head>');
+      }
+      return originalSend(body);
+    };
+    next();
+  });
+
   // Mount API Modules
   app.use('/api/auth', authRoutes);
   app.use('/api/categories', categoriesRoutes);
@@ -119,6 +193,10 @@ function createApp() {
   app.use('/api/sync', syncRoutes);
   app.use('/api/backup', backupRoutes);
   app.use('/api/attendance', attendanceRoutes);
+  app.use('/api/cashiers', cashiersRoutes);
+  app.use('/api/suppliers', suppliersRoutes);
+  app.use('/api/expenses', expensesRoutes);
+  app.use('/api/menu', menuRoutes);
 
   // Single Page App Fallback for GET requests
   app.use('/api',(req,res)=>res.status(404).json({error:'المسار غير موجود / API endpoint not found'}));

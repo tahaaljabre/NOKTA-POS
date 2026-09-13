@@ -1,0 +1,35 @@
+<div id="admin-expenses-admin" class="admin-panel expenses-panel">
+  <div class="expenses-heading">
+    <div><p class="expenses-eyebrow" data-i18n="expenses_eyebrow">سجل الصرف اليومي</p><h2 data-i18n="admin_expenses">المصروفات</h2><p data-i18n="expenses_intro">سجّل مشتريات المحل وصرفياته مع الكاشير وطريقة الدفع.</p></div>
+    <div class="expenses-heading-mark" aria-hidden="true">↗</div>
+  </div>
+  <div class="expenses-layout">
+    <section class="expenses-card expenses-entry">
+      <h3 data-i18n="expenses_new">مصروف جديد</h3>
+      <form id="expenses-form">
+        <div class="expenses-fields">
+          <label><span data-i18n="expenses_date">تاريخ الصرف</span><input name="expense_date" type="date" required></label>
+          <label><span data-i18n="expenses_title">وصف الشراء أو المصروف</span><input name="title" maxlength="160" required></label>
+          <label><span data-i18n="expenses_category">التصنيف</span><select name="category"><option value="purchase" data-i18n="expenses_category_purchase">مشتريات</option><option value="operations" data-i18n="expenses_category_operations">تشغيل</option><option value="utilities" data-i18n="expenses_category_utilities">خدمات</option><option value="transport" data-i18n="expenses_category_transport">نقل</option><option value="other" data-i18n="expenses_category_other">أخرى</option></select></label>
+          <label><span data-i18n="expenses_amount">المبلغ</span><input name="amount" type="number" min="0.01" step="0.01" required></label>
+          <label><span data-i18n="expenses_cashier">الكاشير الذي خرج منه المبلغ</span><select name="cashier_id" id="expenses-cashier" required></select></label>
+          <label><span data-i18n="expenses_payment">طريقة الصرف</span><select name="payment_method"><option value="cash" data-i18n="cash">نقدي</option><option value="card" data-i18n="expenses_payment_card">شبكة</option><option value="bank_transfer" data-i18n="bank_transfer">تحويل بنكي</option><option value="other" data-i18n="expenses_category_other">أخرى</option></select></label>
+          <label><span data-i18n="expenses_payee">الجهة المستلمة</span><input name="payee" maxlength="160"></label>
+          <label><span data-i18n="expenses_reference">رقم المرجع أو الفاتورة</span><input name="reference_number" maxlength="100"></label>
+          <label class="expenses-wide"><span data-i18n="notes">ملاحظات</span><textarea name="notes" maxlength="1000" rows="2"></textarea></label>
+        </div>
+        <button class="expenses-button expenses-button-primary" type="submit" id="expenses-save" data-i18n="expenses_save">حفظ سند المصروف</button>
+      </form>
+    </section>
+    <section class="expenses-card expenses-history">
+      <div class="expenses-history-head"><div><h3 data-i18n="expenses_history">سجل المصروفات</h3><p data-i18n="expenses_period_hint">اختر الفترة ثم اعرض أو اطبع التقرير التفصيلي.</p></div><strong id="expenses-total"></strong></div>
+      <div class="expenses-filters">
+        <label><span data-i18n="expenses_from">من</span><input type="date" id="expenses-from"></label>
+        <label><span data-i18n="expenses_to">إلى</span><input type="date" id="expenses-to"></label>
+        <button type="button" class="expenses-button expenses-button-light" id="expenses-load" data-i18n="load">عرض</button>
+        <button type="button" class="expenses-button expenses-button-primary" id="expenses-print-report" data-i18n="expenses_print_report">طباعة تقرير المصروفات</button>
+      </div>
+      <div class="expenses-table-wrap"><table class="expenses-table"><thead><tr><th data-i18n="expenses_receipt_no">رقم السند</th><th data-i18n="expenses_date">التاريخ</th><th data-i18n="expenses_title">الوصف</th><th data-i18n="expenses_cashier_short">الكاشير</th><th data-i18n="expenses_payment">طريقة الصرف</th><th data-i18n="expenses_amount">المبلغ</th><th data-i18n="expenses_actions">إجراءات</th></tr></thead><tbody id="expenses-rows"></tbody></table></div>
+    </section>
+  </div>
+</div>

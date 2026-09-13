@@ -31,6 +31,7 @@ router.post('/login', (req, res) => {
     phone: emp.phone || '',
     default_floor: emp.default_floor || 1,
     default_station: emp.default_station || (emp.role === 'waiter' ? 'waiter_mobile' : 'cashier_floor1'),
+    cashier_code: emp.cashier_code || '',
     permissions,
     max_discount: maxDiscount,
     token: issueToken(emp)
@@ -61,9 +62,10 @@ router.post('/setup-admin', (req, res) => {
     logAudit(existingAdmin.id, String(name).trim(), 'admin_login_migrated', 'employee', existingAdmin.id, 'Administrator login migrated without changing business data');
     return res.status(200).json({ ok: true, migrated: true });
   }
-  if (db.prepare("SELECT value FROM settings WHERE key='setup_complete'").get() || db.prepare('SELECT id FROM employees LIMIT 1').get())
+  // إذا حُذفت كل حسابات الموظفين، اسمح باستعادة حساب المدير الأول حتى لو بقي علم setup_complete.
+  if (db.prepare('SELECT id FROM employees LIMIT 1').get())
     return res.status(409).json({ error: 'التهيئة مغلقة؛ يلزم استرجاع إداري محلي / Setup locked; local administrator recovery required' });
-  const permissions = { pos: true, menu: true, reports: true, settings: true, audit: true, employees: true, customers: true, inventory: true, tables: true, daily_closing: true, edit_orders: true, delete_orders: true, view_invoices: true };
+  const permissions = { pos: true, menu: true, reports: true, settings: true, audit: true, employees: true, customers: true, inventory: true, tables: true, daily_closing: true, edit_orders: true, delete_orders: true, view_invoices: true, cashiers: true, manage_payments: true, manage_purchases: true, manage_suppliers: true, manage_expenses: true, kitchen: true, discount_orders: true, cancel_orders: true, attendance: true, dashboard: true, backup: true, admin: true };
   try {
     const info = db.prepare('INSERT INTO employees (username, name, name_en, pin, role, permissions) VALUES (?, ?, ?, ?, ?, ?)').run(
       cleanUsername, String(name).trim(), 'Manager', require('../database/db').hashPin(password), 'admin', JSON.stringify(permissions)

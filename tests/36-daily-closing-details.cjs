@@ -1,0 +1,52 @@
+const { start } = require('./support.cjs');
+
+(async () => {
+  const { api, db, id, assert, close } = await start();
+  try {
+    const date = require('../src/services/business-time').dayOf();
+    const base = { status: 'completed', items: [{ item_id: 1, quantity: 1 }] };
+    const cash = await api('/api/orders', 'POST', { ...base, type: 'takeaway', payment_method: 'cash' });
+    const grab = await api('/api/orders', 'POST', { ...base, type: 'delivery', payment_method: 'platform', attributes: { delivery_app_id: 'grab' } });
+    const line = await api('/api/orders', 'POST', { ...base, type: 'delivery', payment_method: 'platform', attributes: { delivery_app_id: 'lineman' } });
+    assert.equal(cash.status, 200);
+    assert.equal(grab.status, 200);
+    assert.equal(line.status, 200);
+    const opening = await api('/api/daily-closings/open', 'POST', { date, opening_cash: 100, notes: 'Opening float' });
+    assert.equal(opening.status, 200);
+    const supplier = await api('/api/suppliers', 'POST', { code: 'EXP-1', name: 'Supplier expense' });
+    assert.equal(supplier.status, 200);
+    const payment = await api(`/api/suppliers/${supplier.data.id}/payments`, 'POST', { payment_date: date, amount: 15, payment_method: 'cash', notes: 'Delivery' });
+    assert.equal(payment.status, 200, JSON.stringify(payment.data));
+    const ownShift = await api(`/api/daily-closings/current-shift?date=${date}`);
+    assert.equal(ownShift.status, 200);
+    assert.equal(ownShift.data.cash_supplier_expenses, 15);
+    const result = await api(`/api/reports/daily?date=${date}`);
+    assert.equal(result.status, 200, JSON.stringify(result.data));
+    const report = result.data;
+    assert.equal(report.by_delivery_app.length, 2);
+    assert.equal(report.platform_receivable, grab.data.total + line.data.total);
+    assert.equal(report.cash_sales, cash.data.total);
+    assert.equal(report.opening_cash, 100);
+    assert.equal(report.supplier_expenses_total, 15);
+    assert.equal(report.cash_expenses, 15);
+    assert.equal(report.expected_cash, 100 + cash.data.total - 15);
+    assert.equal(report.net_after_expenses, report.total_revenue - 15);
+    assert.equal(report.supplier_expenses[0].supplier_name, 'Supplier expense');
+    assert(report.by_cashier.length > 0);
+    const closeResult = await api('/api/daily-closings/close', 'POST', { date, counted_cash: 100, notes: 'Cash counted' });
+    assert.equal(closeResult.status, 200, JSON.stringify(closeResult.data));
+    const counted = (await api(`/api/reports/daily?date=${date}`)).data;
+    assert.equal(counted.counted_cash, 100);
+    assert.equal(counted.cash_count_complete, true);
+    assert.equal(counted.cash_difference, 100 - counted.expected_cash);
+    assert(counted.closing_notes.some(row => row.note === 'Cash counted'));
+    const closingId = db.prepare('SELECT id FROM daily_closings WHERE employee_id=? AND date=?').get(id, date).id;
+    const approval = await api(`/api/daily-closings/${closingId}/approve`, 'POST', {});
+    assert.equal(approval.status, 200);
+    assert.equal(db.prepare('SELECT approved_by FROM daily_closings WHERE id=?').get(closingId).approved_by, id);
+    const reopen = await api(`/api/daily-closings/${closingId}/reopen`, 'POST', {});
+    assert.equal(reopen.status, 200);
+    assert.equal(db.prepare('SELECT is_closed FROM daily_closings WHERE id=?').get(closingId).is_closed, 0);
+    console.log('PASS 36: daily closing details include apps, supplier payments, and expected cash');
+  } finally { await close(); }
+})().catch(error => { console.error(error); process.exitCode = 1; });

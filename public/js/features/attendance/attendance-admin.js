@@ -95,9 +95,28 @@ async function deleteHrEmployee(id) {
 }
 
 function printHrReport(title, employees, records) {
-  const rows = employees.map(employee => { const record = records.find(item => item.hr_employee_id === employee.id) || {}; return `<tr><td>${escapeHtml(employee.name)}</td><td>${escapeHtml(employee.employee_code)}</td><td>${escapeHtml(employee.department || '—')}</td><td>${escapeHtml(record.check_in || '—')}</td><td>${escapeHtml(record.check_out || '—')}</td><td>${escapeHtml(t(`attendance_${record.status || 'absent'}`))}</td></tr>`; }).join('');
-  const win = window.open('', '_blank', 'noopener'); if (!win) return;
-  win.document.write(`<!doctype html><html dir="${currentLang === 'ar' ? 'rtl' : 'ltr'}"><head><meta charset="utf-8"><title>${escapeHtml(title)}</title><style>body{font-family:Segoe UI,Tahoma,sans-serif;padding:24px;color:#321f22}h1{color:#6b1124}table{width:100%;border-collapse:collapse;margin-top:20px}th,td{border:1px solid #d9cbb9;padding:9px;text-align:start}th{background:#f3eadf}@media print{button{display:none}}</style></head><body><h1>${escapeHtml(title)}</h1><p>${new Date().toLocaleString()}</p><table><thead><tr><th>${t('hr_name_ar')}</th><th>${t('hr_code')}</th><th>${t('hr_department')}</th><th>${t('check_in')}</th><th>${t('check_out')}</th><th>${t('attendance_status')}</th></tr></thead><tbody>${rows}</tbody></table><button onclick="window.print()">${t('print')}</button><script>window.onload=()=>window.print()</script></body></html>`); win.document.close();
+  const rows = employees.map(employee => {
+    const record = records.find(item => item.hr_employee_id === employee.id) || {};
+    return `<tr><td>${escapeHtml(employee.name)}</td><td>${escapeHtml(employee.employee_code)}</td><td>${escapeHtml(employee.department || '—')}</td><td>${escapeHtml(record.check_in || '—')}</td><td>${escapeHtml(record.check_out || '—')}</td><td>${escapeHtml(t(`attendance_${record.status || 'absent'}`))}</td></tr>`;
+  }).join('');
+  const dir = currentLang === 'ar' ? 'rtl' : 'ltr';
+  const html = [
+    `<!doctype html><html dir="${dir}"><head><meta charset="utf-8">`,
+    `<title>${escapeHtml(title)}</title>`,
+    '<style>body{font-family:Segoe UI,Tahoma,sans-serif;padding:24px;color:#321f22}h1{color:#6b1124}table{width:100%;border-collapse:collapse;margin-top:20px}th,td{border:1px solid #d9cbb9;padding:9px;text-align:start}th{background:#f3eadf}@media print{button{display:none}}</style>',
+    '</head><body>',
+    `<h1>${escapeHtml(title)}</h1>`,
+    `<p>${new Date().toLocaleString()}</p>`,
+    `<table><thead><tr><th>${escapeHtml(t('hr_name_ar'))}</th><th>${escapeHtml(t('hr_code'))}</th><th>${escapeHtml(t('hr_department'))}</th><th>${escapeHtml(t('check_in'))}</th><th>${escapeHtml(t('check_out'))}</th><th>${escapeHtml(t('attendance_status'))}</th></tr></thead>`,
+    `<tbody>${rows}</tbody></table>`,
+    `<br><button onclick="window.print()">${escapeHtml(t('print'))}</button>`,
+    '</body></html>'
+  ].join('');
+  // Blob URL بدلاً من document.write لتجنب XSS والتوافق مع CSP
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const win = window.open(url, '_blank', 'noopener');
+  if (win) setTimeout(() => URL.revokeObjectURL(url), 60000);
 }
 
 function printHrEmployeeReport(id) { const employee = attendanceEmployees.find(item => item.id === id); if (employee) printHrReport(`${t('hr_employee_report')} — ${employee.name}`, [employee], attendanceRecords); }

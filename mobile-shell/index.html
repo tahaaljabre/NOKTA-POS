@@ -4,13 +4,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#202a44">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: http: https: ws: wss:;">
   <title>NOKTA POS</title>
   <style>
-    *{box-sizing:border-box} body{margin:0;min-height:100vh;display:grid;place-items:center;font-family:Arial,"Segoe UI",sans-serif;background:#f5f7fb;color:#202a44;padding:24px}.card{width:min(100%,420px);text-align:center;background:#fff;border-radius:26px;padding:34px 26px;box-shadow:0 15px 45px #15223b1c}.mark{width:80px;height:80px;margin:0 auto 16px;border-radius:22px;background:#202a44 url('nokta-pos-icon.png') center/cover no-repeat}.brand{font-size:26px;font-weight:800;margin:0}.sub{color:#64748b;line-height:1.7;margin:10px 0 25px}label{text-align:right;display:block;font-size:14px;font-weight:700;margin-bottom:8px}input{direction:ltr;text-align:left;width:100%;border:1px solid #cbd5e1;border-radius:12px;padding:14px;font-size:16px}input[aria-invalid="true"]{border-color:#b91c1c;outline-color:#b91c1c}button{width:100%;margin-top:14px;border:0;border-radius:12px;background:#18a999;color:white;font-size:16px;font-weight:700;padding:14px}.hint{font-size:12px;color:#64748b;line-height:1.6;margin-top:18px}.error{min-height:22px;color:#b91c1c;font-size:13px;margin:9px 0 0}.en{display:block;direction:ltr;font-size:12px;font-weight:400;color:#64748b;margin-top:3px}
+    *{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;font-family:Arial,"Segoe UI",sans-serif;background:#f5f7fb;color:#202a44;padding:24px}.card{width:min(100%,420px);text-align:center;background:#fff;border-radius:26px;padding:34px 26px;box-shadow:0 15px 45px #15223b1c}.mark{width:80px;height:80px;margin:0 auto 16px;border-radius:22px;background:#202a44 url('nokta-pos-icon.png') center/cover no-repeat}.brand{font-size:26px;font-weight:800;margin:0}.sub{color:#64748b;line-height:1.7;margin:10px 0 25px}label{text-align:right;display:block;font-size:14px;font-weight:700;margin-bottom:8px}input{direction:ltr;text-align:left;width:100%;border:1px solid #cbd5e1;border-radius:12px;padding:14px;font-size:16px}input[aria-invalid="true"]{border-color:#b91c1c;outline-color:#b91c1c}button{width:100%;margin-top:14px;border:0;border-radius:12px;background:#18a999;color:white;font-size:16px;font-weight:700;padding:14px}.hint{font-size:12px;color:#64748b;line-height:1.6;margin-top:18px}.error{min-height:22px;color:#b91c1c;font-size:13px;margin:9px 0 0}.en{display:block;direction:ltr;font-size:12px;font-weight:400;color:#64748b;margin-top:3px}#status{margin-top:12px;font-size:13px;color:#18a999;display:none}
   </style>
 </head>
 <body>
-  <main class="card">
+  <main class="card" id="setup-screen">
     <div class="mark"></div>
     <h1 class="brand">NOKTA POS</h1>
     <p class="sub">أدخل رابط خادم نقطة البيع داخل المنشأة أو رابط Tailscale الآمن.<span class="en">Enter the local POS server or secure Tailscale URL.</span></p>
@@ -18,20 +19,50 @@
     <input id="server-url" inputmode="url" autocomplete="url" placeholder="http://192.168.1.50:3000">
     <p id="error" class="error" role="alert"></p>
     <button id="connect">اتصال / Connect</button>
+    <p id="status">جاري الاتصال...</p>
     <p class="hint">مثال: http://192.168.1.50:3000<br>للعودة وتغيير الرابط استخدم زر الرجوع في الجهاز.<span class="en">Use the device Back button to change this URL.</span></p>
   </main>
+  <main class="card" id="loading-screen" style="display:none">
+    <div class="mark"></div>
+    <h1 class="brand">NOKTA POS</h1>
+    <p class="sub">جاري تحميل النظام...<span class="en">Loading POS system...</span></p>
+    <p id="loading-status" style="font-size:13px;color:#64748b"></p>
+    <p id="loading-error" class="error" role="alert"></p>
+    <button id="retry-btn" style="display:none;background:#b91c1c">إعادة المحاولة / Retry</button>
+  </main>
+
   <script>
+    const isAndroid = /android/i.test(navigator.userAgent);
+    const storageKey = 'nokta_server_url';
+    const setupScreen = document.getElementById('setup-screen');
+    const loadingScreen = document.getElementById('loading-screen');
     const input = document.getElementById('server-url');
-    const saved = localStorage.getItem('nokta_server_url');
-    if (saved) input.value = saved;
     const error = document.getElementById('error');
-    const connect = () => {
-      let url = input.value.trim().replace(/\/$/, '');
-      if (!/^https?:\/\//i.test(url)) url = `http://${url}`;
+    const status = document.getElementById('status');
+    const loadingStatus = document.getElementById('loading-status');
+    const loadingError = document.getElementById('loading-error');
+    const retryBtn = document.getElementById('retry-btn');
+
+    const savedUrl = localStorage.getItem(storageKey);
+    if (savedUrl) {
+      input.value = savedUrl;
+    }
+
+    function validateUrl(url) {
+      if (!/^https?:\/\//i.test(url)) url = 'http://' + url;
       try {
         const parsed = new URL(url);
         if (!parsed.hostname || !['http:', 'https:'].includes(parsed.protocol)) throw new Error('invalid');
+        return url;
       } catch {
+        return null;
+      }
+    }
+
+    function connect() {
+      let url = input.value.trim().replace(/\/$/, '');
+      const validated = validateUrl(url);
+      if (!validated) {
         input.setAttribute('aria-invalid', 'true');
         error.textContent = 'الرابط غير صحيح / Invalid server URL';
         input.focus();
@@ -39,11 +70,56 @@
       }
       input.removeAttribute('aria-invalid');
       error.textContent = '';
-      localStorage.setItem('nokta_server_url', url);
-      window.location.assign(url);
+      localStorage.setItem(storageKey, validated);
+
+      if (isAndroid) {
+        showLoading(validated);
+        loadInWebView(validated);
+      } else {
+        window.location.assign(validated);
+      }
+    }
+
+    function showLoading(url) {
+      setupScreen.style.display = 'none';
+      loadingScreen.style.display = '';
+      loadingStatus.textContent = url;
+      loadingError.textContent = '';
+      retryBtn.style.display = 'none';
+    }
+
+    function loadInWebView(url) {
+      window.location.href = url;
+    }
+
+    function goBackToSetup() {
+      loadingScreen.style.display = 'none';
+      setupScreen.style.display = '';
+      input.value = localStorage.getItem(storageKey) || '';
+    }
+
+    retryBtn.onclick = function() {
+      const url = localStorage.getItem(storageKey);
+      if (url) {
+        showLoading(url);
+        loadInWebView(url);
+      }
     };
+
     document.getElementById('connect').onclick = connect;
-    input.addEventListener('keydown', event => { if (event.key === 'Enter') connect(); });
+    input.addEventListener('keydown', function(e) { if (e.key === 'Enter') connect(); });
+
+    document.addEventListener('backbutton', function(e) {
+      e.preventDefault();
+      if (loadingScreen.style.display !== 'none') {
+        goBackToSetup();
+      }
+    }, false);
+
+    if (savedUrl && isAndroid) {
+      showLoading(savedUrl);
+      setTimeout(function() { loadInWebView(savedUrl); }, 300);
+    }
   </script>
 </body>
 </html>

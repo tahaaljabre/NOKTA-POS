@@ -162,4 +162,6 @@
 }
 .btn-complete { background: var(--success); }
 .btn-cancel-order { background: var(--danger); }
+.btn-edit-order { background: var(--warning, #b58b22); color: #fff; border: 0; border-radius: 8px; padding: 8px 10px; font: 600 12px var(--font); cursor: pointer; }
+.btn-edit-order:hover { filter: brightness(.95); }
 .btn-print-order { background: #5a6268; }

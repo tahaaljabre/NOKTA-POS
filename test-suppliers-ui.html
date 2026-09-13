@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Suppliers UI Test</title>
+  <link rel="stylesheet" href="public/style.css">
+  <style>
+    body { padding: 20px; font-family: Arial, sans-serif; }
+    .test-section { margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 8px; }
+    .test-button { margin: 10px; padding: 10px 20px; background: #4a90e2; color: white; border: none; border-radius: 6px; cursor: pointer; }
+    .test-button:hover { background: #357abd; }
+    .console-output { background: #f5f5f5; padding: 15px; border-radius: 6px; margin-top: 10px; font-family: monospace; font-size: 12px; max-height: 300px; overflow-y: auto; }
+    .error { color: #d32f2f; }
+    .success { color: #2e7d32; }
+  </style>
+</head>
+<body>
+  <h1>🧪 Suppliers UI Test</h1>
+  
+  <div class="test-section">
+    <h2>Variables Check</h2>
+    <button class="test-button" onclick="checkVariables()">Check Variables</button>
+    <div id="variables-output" class="console-output"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>Functions Check</h2>
+    <button class="test-button" onclick="checkFunctions()">Check Functions</button>
+    <div id="functions-output" class="console-output"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>Modal Functions</h2>
+    <button class="test-button" onclick="testModalFunctions()">Test Modals</button>
+    <div id="modal-output" class="console-output"></div>
+  </div>
+  
+  <!-- Include main scripts -->
+  <script src="public/js/core/translations.js"></script>
+  <script src="public/js/core/ui-feedback.js"></script>
+  <script src="public/js/core/api-client.js"></script>
+  
+  <!-- Mock currentLang and t function -->
+  <script>
+    const currentLang = 'ar';
+    if (typeof t === 'undefined') {
+      function t(key) {
+        return translations[currentLang]?.[key] || key;
+      }
+    }
+    
+    // Mock api function
+    if (typeof api === 'undefined') {
+      async function api(endpoint, method = 'GET', data = null) {
+        console.log('Mock API call:', endpoint, method, data);
+        return { success: true, data: [] };
+      }
+    }
+    
+    // Mock escapeHtml
+    if (typeof escapeHtml === 'undefined') {
+      function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+      }
+    }
+    
+    // Mock toast
+    if (typeof toast === 'undefined') {
+      function toast(msg, type = 'info') {
+        console.log(`[${type}] ${msg}`);
+      }
+    }
+  </script>
+  
+  <!-- Include suppliers scripts -->
+  <script src="public/js/features/suppliers/suppliers-admin.js"></script>
+  <script src="public/js/features/suppliers/supplier-purchases.js"></script>
+  <script src="public/js/features/suppliers/supplier-payments.js"></script>
+  
+  <!-- Test scripts -->
+  <script>
+    function log(outputId, message, type = 'info') {
+      const output = document.getElementById(outputId);
+      const className = type === 'error' ? 'error' : type === 'success' ? 'success' : '';
+      output.innerHTML += `<div class="${className}">${message}</div>`;
+    }
+    
+    function checkVariables() {
+      const output = document.getElementById('variables-output');
+      output.innerHTML = '';
+      
+      log('variables-output', '=== Checking Global Variables ===');
+      
+      try {
+        log('variables-output', `suppliersData: ${typeof suppliersData} (${Array.isArray(suppliersData) ? 'Array' : 'Not Array'})`, 
+            typeof suppliersData !== 'undefined' ? 'success' : 'error');
+        
+        log('variables-output', `currentView: ${typeof currentView} = "${currentView}"`, 
+            typeof currentView !== 'undefined' ? 'success' : 'error');
+        
+        log('variables-output', `currentSupplier: ${typeof currentSupplier}`, 
+            typeof currentSupplier !== 'undefined' ? 'success' : 'error');
+        
+        log('variables-output', `purchaseItems: ${typeof purchaseItems}`, 
+            typeof purchaseItems !== 'undefined' ? 'success' : 'error');
+        
+        log('variables-output', `currentPurchaseSupplier: ${typeof currentPurchaseSupplier}`, 
+            typeof currentPurchaseSupplier !== 'undefined' ? 'success' : 'error');
+        
+        log('variables-output', `currentPaymentSupplier: ${typeof currentPaymentSupplier}`, 
+            typeof currentPaymentSupplier !== 'undefined' ? 'success' : 'error');
+        
+      } catch (e) {
+        log('variables-output', `Error: ${e.message}`, 'error');
+      }
+    }
+    
+    function checkFunctions() {
+      const output = document.getElementById('functions-output');
+      output.innerHTML = '';
+      
+      log('functions-output', '=== Checking Functions ===');
+      
+      const functions = [
+        'initSuppliersAdmin',
+        'loadStatistics',
+        'loadSuppliers',
+        'openSupplierForm',
+        'viewSupplierDetails',
+        'openPurchaseForm',
+        'openPaymentForm',
+        'openSupplierModal',
+        'closeSupplierModal',
+        'closeAllSupplierModals'
+      ];
+      
+      functions.forEach(func => {
+        const exists = typeof window[func] === 'function';
+        log('functions-output', `${func}: ${exists ? 'EXISTS' : 'MISSING'}`, 
+            exists ? 'success' : 'error');
+      });
+    }
+    
+    function testModalFunctions() {
+      const output = document.getElementById('modal-output');
+      output.innerHTML = '';
+      
+      log('modal-output', '=== Testing Modal Functions ===');
+      
+      try {
+        // Test openSupplierModal
+        log('modal-output', 'Testing openSupplierModal with non-existent modal...');
+        openSupplierModal('test-modal');
+        log('modal-output', 'openSupplierModal executed without error', 'success');
+        
+        // Test closeSupplierModal
+        log('modal-output', 'Testing closeSupplierModal...');
+        closeSupplierModal('test-modal');
+        log('modal-output', 'closeSupplierModal executed without error', 'success');
+        
+        // Test closeAllSupplierModals
+        log('modal-output', 'Testing closeAllSupplierModals...');
+        closeAllSupplierModals();
+        log('modal-output', 'closeAllSupplierModals executed without error', 'success');
+        
+      } catch (e) {
+        log('modal-output', `Error: ${e.message}`, 'error');
+        console.error(e);
+      }
+    }
+    
+    // Auto-run checks on load
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        checkVariables();
+        checkFunctions();
+      }, 500);
+    });
+  </script>
+</body>
+</html>

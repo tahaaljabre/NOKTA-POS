@@ -15,6 +15,12 @@ function addColumnIfNotExists(db, table, column, type) {
 }
 
 function runMigrations(db) {
+  db.prepare(`CREATE TABLE IF NOT EXISTS cashiers (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, code TEXT NOT NULL UNIQUE,
+    name TEXT NOT NULL, name_en TEXT DEFAULT '', active INTEGER DEFAULT 1,
+    attributes TEXT DEFAULT '{}', created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`).run();
   // New HR/attendance tables are created by schema.js. Keep this migration
   // marker for installations upgraded from a pre-attendance database.
   db.prepare(`CREATE TABLE IF NOT EXISTS hr_employees (
@@ -41,6 +47,10 @@ function runMigrations(db) {
     ['orders', 'invoice_number', 'INTEGER DEFAULT 0'],
     ['orders', 'employee_name', "TEXT DEFAULT ''"],
     ['orders', 'employee_id', 'INTEGER DEFAULT 1'],
+    ['orders', 'cashier_code', "TEXT DEFAULT ''"],
+    ['daily_closings', 'approved_by', 'INTEGER'],
+    ['daily_closings', 'approved_at', 'DATETIME'],
+    ['shifts', 'cashier_code', "TEXT DEFAULT ''"],
     ['orders', 'customer_id', 'INTEGER'],
     ['orders', 'shift_id', 'INTEGER'],
     ['orders', 'payment_method', "TEXT DEFAULT 'cash'"],
@@ -88,6 +98,7 @@ function runMigrations(db) {
     ['employees', 'default_station', "TEXT DEFAULT 'cashier_floor1'"],
     ['employees', 'attributes', "TEXT DEFAULT '{}'"],
     ['employees', 'max_discount', 'REAL DEFAULT 100'],
+    ['employees', 'cashier_code', "TEXT DEFAULT ''"],
 
     // Tables
     ['tables', 'zone_id', 'INTEGER'],
@@ -112,7 +123,40 @@ function runMigrations(db) {
   columnsToAdd.forEach(([table, col, type]) => {
     addColumnIfNotExists(db, table, col, type);
   });
+  // Older installations may already have a minimal suppliers table. CREATE TABLE
+  // IF NOT EXISTS does not add the financial fields required by the dashboard.
+  for (const [column, type] of [
+    ['name_en', "TEXT DEFAULT ''"], ['company_name', "TEXT DEFAULT ''"],
+    ['company_name_en', "TEXT DEFAULT ''"], ['tax_number', "TEXT DEFAULT ''"],
+    ['commercial_registration', "TEXT DEFAULT ''"], ['phone', "TEXT DEFAULT ''"],
+    ['email', "TEXT DEFAULT ''"], ['address', "TEXT DEFAULT ''"],
+    ['city', "TEXT DEFAULT ''"], ['country', "TEXT DEFAULT 'Saudi Arabia'"],
+    ['payment_terms', 'INTEGER DEFAULT 30'], ['credit_limit', 'REAL DEFAULT 0'],
+    ['opening_balance', 'REAL DEFAULT 0'], ['current_balance', 'REAL DEFAULT 0'],
+    ['total_purchases', 'REAL DEFAULT 0'], ['total_payments', 'REAL DEFAULT 0'],
+    ['category', "TEXT DEFAULT 'general'"], ['contact_person', "TEXT DEFAULT ''"],
+    ['contact_phone', "TEXT DEFAULT ''"], ['bank_name', "TEXT DEFAULT ''"],
+    ['bank_account', "TEXT DEFAULT ''"], ['iban', "TEXT DEFAULT ''"],
+    ['notes', "TEXT DEFAULT ''"], ['active', 'INTEGER DEFAULT 1'],
+    ['created_by', 'INTEGER'], ['created_at', 'DATETIME'],
+    ['updated_at', 'DATETIME'], ['cashier_id', 'INTEGER REFERENCES cashiers(id)']
+  ]) addColumnIfNotExists(db, 'suppliers', column, type);
+  // Legacy supplier transaction tables can predate invoice numbers and payment
+  // metadata. Adding nullable/defaulted columns preserves every existing row.
+  for (const [column, type] of [
+    ['supplier_id', 'INTEGER'], ['transaction_type', "TEXT DEFAULT ''"],
+    ['transaction_number', 'TEXT'], ['transaction_date', 'TEXT'],
+    ['amount', 'REAL DEFAULT 0'], ['payment_method', "TEXT DEFAULT 'credit'"],
+    ['reference_number', "TEXT DEFAULT ''"], ['description', "TEXT DEFAULT ''"],
+    ['notes', "TEXT DEFAULT ''"], ['invoice_date', 'TEXT'], ['due_date', 'TEXT'],
+    ['status', "TEXT DEFAULT 'pending'"], ['created_by', 'INTEGER'],
+    ['created_at', 'DATETIME']
+  ]) addColumnIfNotExists(db, 'supplier_transactions', column, type);
+  addColumnIfNotExists(db, 'daily_closings', 'platform_total', 'REAL DEFAULT 0');
+  addColumnIfNotExists(db, 'daily_closings', 'platform_breakdown', "TEXT DEFAULT '{}'");
+  addColumnIfNotExists(db, 'daily_closings', 'counted_cash', 'REAL');
   try { db.prepare('CREATE UNIQUE INDEX IF NOT EXISTS idx_employees_username ON employees(username) WHERE username IS NOT NULL').run(); } catch (e) { console.warn('Migration warning for employee usernames:', e.message); }
+  addColumnIfNotExists(db, 'tables', 'is_deleted', 'INTEGER DEFAULT 0');
 }
 
 module.exports = { runMigrations, addColumnIfNotExists };

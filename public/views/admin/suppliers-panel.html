@@ -1,0 +1,182 @@
+<div id="admin-suppliers-admin" class="admin-panel">
+  <!-- Header Section -->
+  <div class="panel-header">
+    <div class="header-title">
+      <h2>
+        <i class="fas fa-truck"></i>
+        <span data-i18n="suppliers_management">إدارة الموردين</span>
+      </h2>
+      <p class="subtitle" data-i18n="suppliers_subtitle">Suppliers Management</p>
+    </div>
+    <button type="button" class="btn btn-primary btn-lg" id="btn-add-supplier">
+      <span aria-hidden="true">＋</span>
+      <span data-i18n="add_supplier">إضافة مورد</span>
+    </button>
+  </div>
+
+  <!-- Statistics Cards -->
+  <div class="stats-grid" id="suppliers-stats">
+    <div class="stat-card stat-card-primary">
+      <div class="stat-icon"><i class="fas fa-users"></i></div>
+      <div class="stat-details">
+        <div class="stat-value" id="stat-total-suppliers">0</div>
+        <div class="stat-label" data-i18n="total_suppliers">إجمالي الموردين</div>
+      </div>
+    </div>
+    <div class="stat-card stat-card-success">
+      <div class="stat-icon"><i class="fas fa-shopping-cart"></i></div>
+      <div class="stat-details">
+        <div class="stat-value" id="stat-total-purchases">0</div>
+        <div class="stat-label" data-i18n="total_purchases">إجمالي المشتريات</div>
+      </div>
+    </div>
+    <div class="stat-card stat-card-warning">
+      <div class="stat-icon"><i class="fas fa-money-bill-wave"></i></div>
+      <div class="stat-details">
+        <div class="stat-value" id="stat-total-payments">0</div>
+        <div class="stat-label" data-i18n="total_payments">إجمالي المدفوعات</div>
+      </div>
+    </div>
+    <div class="stat-card stat-card-info">
+      <div class="stat-icon"><i class="fas fa-balance-scale"></i></div>
+      <div class="stat-details">
+        <div class="stat-value" id="stat-total-balance">0</div>
+        <div class="stat-label" data-i18n="total_balance">الرصيد الإجمالي</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Search & Filter Toolbar -->
+  <div class="admin-toolbar">
+    <div class="toolbar-group">
+      <div class="search-box">
+        <i class="fas fa-search"></i>
+        <input type="text" id="supplier-search" data-i18n-placeholder="search_supplier" placeholder="بحث عن مورد...">
+      </div>
+      <select id="supplier-status-filter" class="form-select">
+        <option value="all" data-i18n="all_suppliers">جميع الموردين</option>
+        <option value="active" data-i18n="active_suppliers">الموردين النشطين</option>
+        <option value="inactive" data-i18n="inactive_suppliers">الموردين غير النشطين</option>
+      </select>
+      <select id="supplier-category-filter" class="form-select">
+        <option value="all" data-i18n="all_categories">جميع التصنيفات</option>
+        <option value="general" data-i18n="general">عام</option>
+        <option value="food" data-i18n="food">مواد غذائية</option>
+        <option value="beverages" data-i18n="beverages">مشروبات</option>
+        <option value="equipment" data-i18n="equipment">معدات</option>
+        <option value="packaging" data-i18n="packaging">تغليف</option>
+      </select>
+    </div>
+    <div class="toolbar-actions">
+      <button class="btn btn-outline" id="btn-export-suppliers">
+        <i class="fas fa-file-export"></i>
+        <span data-i18n="export">تصدير</span>
+      </button>
+      <button class="btn btn-outline" id="btn-refresh-suppliers">
+        <i class="fas fa-sync"></i>
+        <span data-i18n="refresh">تحديث</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- View Toggle -->
+  <div class="view-toggle">
+    <button class="view-btn active" data-view="grid" id="btn-view-grid">
+      <i class="fas fa-th-large"></i>
+      <span data-i18n="grid_view">شبكة</span>
+    </button>
+    <button class="view-btn" data-view="list" id="btn-view-list">
+      <i class="fas fa-list"></i>
+      <span data-i18n="list_view">قائمة</span>
+    </button>
+  </div>
+
+  <!-- Suppliers Container -->
+  <div id="suppliers-container" class="suppliers-grid">
+    <!-- Suppliers will be dynamically loaded here -->
+  </div>
+
+  <!-- Empty State -->
+  <div id="suppliers-empty-state" class="empty-state" style="display:none;">
+    <i class="fas fa-truck fa-3x"></i>
+    <h3 data-i18n="no_suppliers">لا يوجد موردين</h3>
+    <p data-i18n="add_first_supplier">قم بإضافة أول مورد لديك</p>
+    <button class="btn btn-primary" id="btn-add-first-supplier">
+      <i class="fas fa-plus"></i>
+      <span data-i18n="add_supplier">إضافة مورد</span>
+    </button>
+  </div>
+
+  <!-- Loading State -->
+  <div id="suppliers-loading" class="loading-state" style="display:none;">
+    <div class="spinner"></div>
+    <p data-i18n="loading">جاري التحميل...</p>
+  </div>
+</div>
+
+<!-- ==================== MODALS ==================== -->
+
+<!-- Add/Edit Supplier Modal -->
+<div id="modal-supplier-form" class="modal">
+  <div class="modal-content modal-lg">
+    <div class="modal-header">
+      <h3 id="supplier-modal-title" data-i18n="add_supplier">إضافة مورد</h3>
+      <button class="modal-close" onclick="hideSupplierModal('modal-supplier-form')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <form id="form-supplier">
+        <!-- Basic Information Only -->
+        <div class="form-section">
+          <div class="form-grid-2">
+            <div class="form-group form-group-full">
+              <label data-i18n="supplier_name_ar">اسم المورد (عربي) *</label>
+              <input type="text" name="name" required placeholder="مثال: شركة الغذاء الوطنية">
+            </div>
+            
+            <div class="form-group">
+              <label data-i18n="phone">رقم الهاتف</label>
+              <input type="tel" name="phone" placeholder="05xxxxxxxx">
+            </div>
+            
+            <div class="form-group">
+              <label data-i18n="tax_number">الرقم الضريبي</label>
+              <input type="text" name="tax_number" placeholder="300000000000003">
+            </div>
+            
+            <div class="form-group form-group-full">
+              <label data-i18n="address">العنوان</label>
+              <textarea name="address" rows="2" placeholder="المدينة، الحي، الشارع"></textarea>
+            </div>
+            <div class="form-group form-group-full">
+              <label data-i18n="supplier_cashier">الكاشير المسؤول عن الدفعات</label>
+              <select name="cashier_id" id="supplier-cashier"><option value="" data-i18n="all_cashiers">جميع الكاشيرات</option></select>
+            </div>
+          </div>
+        </div>
+
+        <input type="hidden" name="id">
+        <input type="hidden" name="code" id="supplier-code-hidden">
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" id="btn-cancel-supplier" data-i18n="cancel">إلغاء</button>
+      <button type="button" class="btn btn-primary" id="btn-save-supplier">
+        <i class="fas fa-save"></i>
+        <span data-i18n="save">حفظ</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Supplier Details Modal -->
+<div id="modal-supplier-details" class="modal">
+  <div class="modal-content modal-xl">
+    <div class="modal-header">
+      <h3 id="supplier-details-title">تفاصيل المورد</h3>
+      <button class="modal-close" onclick="hideSupplierModal('modal-supplier-details')">&times;</button>
+    </div>
+    <div class="modal-body" id="supplier-details-body">
+      <!-- Will be dynamically populated -->
+    </div>
+  </div>
+</div>

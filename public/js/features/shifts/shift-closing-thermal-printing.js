@@ -2,40 +2,16 @@
 // ===== Instant Thermal Receipt Print (80mm / 58mm) for Shift Closing =====
 async function printDailyClosingThermal(data = null) {
   let reportData = data;
-  const date = document.getElementById('closing-date')?.value || businessDate();
+  const date = data?.date || document.getElementById('closing-date')?.value || businessDate();
   const empSel = document.getElementById('closing-employee-filter');
-  const empId = empSel?.value || '';
+  const empId = data?.employee_id || empSel?.value || '';
   const empText = empSel && empSel.selectedIndex > 0 ? empSel.options[empSel.selectedIndex].text : (currentLang === 'ar' ? 'كل الموظفين' : 'All Employees');
 
-  if (!reportData) {
-    let orderUrl = `/api/orders?date=${date}&not_deleted=0`;
-    if (empId) orderUrl += `&employee_id=${empId}`;
-    const todayOrders = await api(orderUrl);
-    const completedToday = (todayOrders || []).filter(o => o.status === 'completed');
-
-    let totalRevenue = 0;
-    let paymentTotals = {};
-    completedToday.forEach(o => {
-      const tot = parseFloat(o.total) || 0;
-      totalRevenue += tot;
-      const pm = o.payment_method || 'cash';
-      paymentTotals[pm] = (paymentTotals[pm] || 0) + tot;
-    });
-    
-    const cashTotal = paymentTotals['cash'] || 0;
-
-    reportData = {
-      date: date,
-      employee_name: empText,
-      total_orders: completedToday.length,
-      total_revenue: totalRevenue,
-      cash_total: cashTotal,
-      promptpay_total: promptpayTotal,
-      card_total: cardTotal,
-      truemoney_total: truemoneyTotal,
-      closed_at: new Date().toISOString()
-    };
-  }
+  const daily = await api(`/api/reports/daily?date=${encodeURIComponent(date)}${empId ? `&employee_id=${encodeURIComponent(empId)}` : ''}`);
+  const paymentAmount = method => Number((daily.by_payment || []).find(p => p.payment_method === method)?.total || 0);
+  reportData = { ...reportData, ...daily, date, employee_name: data?.employee_name || empText,
+    cash_total: paymentAmount('cash'), card_total: paymentAmount('card'), promptpay_total: paymentAmount('promptpay'),
+    truemoney_total: paymentAmount('truemoney'), platform_total: Number(daily.platform_receivable || 0) };
 
   let s = {};
   try { s = await api('/api/settings'); } catch(e) {}
@@ -46,14 +22,19 @@ async function printDailyClosingThermal(data = null) {
 
   const totalSales = reportData.total_revenue || 0;
   const cashPct = totalSales > 0 ? (((reportData.cash_total || 0) / totalSales) * 100).toFixed(1) : '0';
+  const networkMethods = (daily.by_payment || []).filter(p => p.payment_method !== 'cash' && p.payment_method !== 'platform');
+  const networkSales = networkMethods.reduce((sum, p) => sum + Number(p.total || 0), 0);
+  const appTotals = daily.by_delivery_app || [];
 
   const iframe = document.createElement('iframe');
   iframe.style.position = 'fixed';
   iframe.style.right = '0';
   iframe.style.bottom = '0';
-  iframe.style.width = '0';
-  iframe.style.height = '0';
+  iframe.style.width = '1px';
+  iframe.style.height = '1px';
+  iframe.style.opacity = '0';
   iframe.style.border = '0';
+  iframe.style.pointerEvents = 'none';
   document.body.appendChild(iframe);
 
   const doc = iframe.contentWindow.document;
@@ -65,7 +46,6 @@ async function printDailyClosingThermal(data = null) {
   <title>Shift Closing Receipt</title>
   <style>
     @page {
-      size: 80mm auto;
       margin: 0;
     }
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -75,7 +55,8 @@ async function printDailyClosingThermal(data = null) {
       font-weight: 600;
       color: #000;
       background: #fff;
-      width: 78mm;
+      width: 100%;
+      max-width: 80mm;
       padding: 6px 8px;
       line-height: 1.35;
       -webkit-print-color-adjust: exact;
@@ -144,36 +125,51 @@ async function printDailyClosingThermal(data = null) {
   ` : ''}
 
   <div class="d-flex highlight-cash">
-    <span>💵 ${currentLang === 'ar' ? 'إجمالي النقد المفترض بالدرج:' : 'Total Expected in Drawer:'}</span>
-    <span>${((reportData.cash_total || 0) + (reportData.opening_cash || 0)).toFixed(2)} ${escapeHtml(currency)}</span>
+    <span>💵 ${t('expected_cash_drawer')}:</span>
+    <span>${Number(reportData.expected_cash || 0).toFixed(2)} ${escapeHtml(currency)}</span>
   </div>
+  <div class="d-flex"><span>${t('expenses_total')} (${t('cash')})</span><span>${Number(reportData.cash_expenses || 0).toFixed(2)} ${escapeHtml(currency)}</span></div>
+  <div class="d-flex"><span>${t('cash_discounts')}</span><span>${Number(reportData.cash_discount || 0).toFixed(2)} ${escapeHtml(currency)}</span></div>
   <div class="d-flex" style="font-size:11.5px;">
-    <span>✍️ ${currentLang === 'ar' ? 'النقد الفعلي بعد العد:' : 'Actual Counted:'}</span>
-    <span>[ ____________ ]</span>
+    <span>✍️ ${t('counted_cash')}:</span>
+    <span>${reportData.counted_cash == null ? '[ ____________ ]' : `${Number(reportData.counted_cash).toFixed(2)} ${escapeHtml(currency)}`}</span>
   </div>
   <div class="d-flex" style="font-size:11px;color:#555;">
-    <span>⚖️ ${currentLang === 'ar' ? 'الفارق (عجز / زيادة):' : 'Difference:'}</span>
-    <span>[ ____________ ]</span>
+    <span>⚖️ ${t('cash_difference')}:</span>
+    <span>${reportData.cash_count_complete ? `${Number(reportData.cash_difference || 0).toFixed(2)} ${escapeHtml(currency)}` : '[ ____________ ]'}</span>
   </div>
 
   <div class="divider"></div>
 
-  <div class="d-flex">
-    <span>💳 ${currentLang === 'ar' ? 'بطاقات وأخرى:' : 'Other Payments:'}</span>
-    <strong>${(totalSales - (reportData.cash_total || 0)).toFixed(2)} ${escapeHtml(currency)}</strong>
+  <div style="font-weight:700;margin-bottom:4px;font-size:12px;">💳 ${currentLang === 'ar' ? 'تفصيل المدفوعات الأخرى:' : 'Other Payments Breakdown:'}</div>
+  ${networkMethods.map(p => `<div class="d-flex"><span>${escapeHtml((typeof paymentMethodsList !== 'undefined' ? paymentMethodsList : []).find(m => m.id === p.payment_method)?.name || p.payment_method)}</span><span>${Number(p.total || 0).toFixed(2)} ${escapeHtml(currency)}</span></div>`).join('')}
+  <div class="d-flex" style="font-size:13px; font-weight:800; border-top:1px solid #000; margin-top:4px; padding-top:4px;">
+    <span>${currentLang === 'ar' ? 'إجمالي المدفوعات الإلكترونية:' : 'Total Electronic Payments:'}</span>
+    <strong>${networkSales.toFixed(2)} ${escapeHtml(currency)}</strong>
   </div>
+  <div class="divider"></div>
+  <div class="d-flex"><span>${t('platform_receivable')}:</span><strong>${(reportData.platform_total || 0).toFixed(2)} ${escapeHtml(currency)}</strong></div>
+  ${appTotals.map(app => `<div class="d-flex"><span>${escapeHtml(app.app_name || deliveryAppName(app.app_id))}</span><span>${Number(app.total || 0).toFixed(2)} ${escapeHtml(currency)}</span></div>`).join('')}
+  <div class="d-flex"><strong>${t('delivery_apps_total')}</strong><strong>${appTotals.reduce((sum, app) => sum + Number(app.total || 0), 0).toFixed(2)} ${escapeHtml(currency)}</strong></div>
+  <div class="divider"></div>
+  ${(reportData.supplier_expenses || []).map(row => `<div class="d-flex"><span>${escapeHtml(row.supplier_name)}</span><span>${Number(row.amount || 0).toFixed(2)} ${escapeHtml(currency)}</span></div>`).join('')}
+  <div class="d-flex"><strong>${t('supplier_expenses_total')}</strong><strong>${Number(reportData.supplier_expenses_total || 0).toFixed(2)} ${escapeHtml(currency)}</strong></div>
+  ${(reportData.shop_expenses || []).map(row => `<div class="d-flex"><span>${escapeHtml(row.title)} · ${escapeHtml(row.cashier_name)}</span><span>${Number(row.amount || 0).toFixed(2)} ${escapeHtml(currency)}</span></div>`).join('')}
+  <div class="d-flex"><strong>${t('expenses_total')}</strong><strong>${Number(reportData.expenses_total || 0).toFixed(2)} ${escapeHtml(currency)}</strong></div>
+  <div class="d-flex"><strong>${t('net_after_expenses')}</strong><strong>${Number(reportData.net_after_expenses || 0).toFixed(2)} ${escapeHtml(currency)}</strong></div>
+  ${(reportData.closing_notes || []).map(row => `<div>${escapeHtml(row.employee_name || '')}: ${escapeHtml(row.note || '')}</div>`).join('')}
 
   <div class="double-divider"></div>
 
   <div class="signature-area">
     <div style="display:flex;justify-content:space-between;text-align:center;">
-      <div style="flex:1;">
-        <div>${currentLang === 'ar' ? 'توقيع الكاشير (الجرد):' : 'Cashier Sign:'}</div>
-        <div style="margin-top:18px;">.....................</div>
+      <div style="flex:1; padding: 0 4px;">
+        <div>${currentLang === 'ar' ? 'توقيع الكاشير:' : 'Cashier Sign:'}</div>
+        <div style="margin-top:18px;">..................</div>
       </div>
-      <div style="flex:1;">
-        <div>${currentLang === 'ar' ? 'استلام المشرف / الإدارة:' : 'Manager Sign:'}</div>
-        <div style="margin-top:18px;">.....................</div>
+      <div style="flex:1; padding: 0 4px;">
+        <div>${currentLang === 'ar' ? 'استلام المشرف:' : 'Manager Sign:'}</div>
+        <div style="margin-top:18px;">..................</div>
       </div>
     </div>
   </div>

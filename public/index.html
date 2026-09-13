@@ -10,17 +10,15 @@
   <meta name="theme-color" content="#6b1124">
   <meta name="description" content="NOKTA POS - Flexible Point of Sale platform">
   <script>
-    // This POS needs its local server to use the shared database and logins.
-    // Opening index.html directly bypasses that server, so send it to the app.
-    if (window.location.protocol === 'file:') {
-      window.location.replace('http://localhost:3000/');
-    }
+    // In Native Android mode (Capacitor), the app will run from http://localhost or https://localhost
+    // We handle API_BASE in api-client.js and show a setup screen if URL is missing.
   </script>
   <title>NOKTA POS</title>
+  <style>.hidden { display: none !important; }</style>
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="nokta-pos-icon.png" type="image/png">
   <link rel="apple-touch-icon" href="nokta-pos-icon.png">
-  <link rel="stylesheet" href="style.css?v=94">
+  <link rel="stylesheet" href="style.css?v=117">
 </head>
 
 <body>
@@ -72,6 +70,22 @@
     </div>
   </div>
 
+  <!-- ===== NATIVE APP SETUP SCREEN (Android) ===== -->
+  <div id="native-setup-screen" class="login-screen hidden" style="z-index: 10000;">
+    <div class="login-box" style="padding: 30px; text-align: center; max-width: 400px;">
+      <div style="font-size:48px; margin-bottom:10px;">🍽️</div>
+      <h1 style="color: #6b1124; font-size: 22px; margin-bottom: 8px;" data-i18n="setup_app_title">إعداد التطبيق</h1>
+      <p style="color: #666; margin-bottom: 20px; font-size: 13px; line-height: 1.6;" data-i18n="setup_app_desc">أدخل رابط الخادم الرئيسي للاتصال به. تأكد من أن الجهاز والخادم على نفس الشبكة.</p>
+      <label style="display:block; text-align:right; font-size:13px; color:#555; margin-bottom:4px;" data-i18n="server_url_label">رابط الخادم</label>
+      <input type="url" id="native-server-url" class="form-control" placeholder="http://192.168.1.100:3000" style="margin-bottom: 6px; text-align: left; direction: ltr;" autocomplete="off">
+      <p id="native-url-error" style="color:#d32f2f; font-size:12px; margin:0 0 12px 0; display:none;"></p>
+      <button id="save-native-url-btn" class="btn btn-primary" style="width: 100%; padding: 12px; font-size: 16px;" data-i18n="save_and_start">حفظ وبدء العمل</button>
+      <div style="margin-top:18px; padding-top:14px; border-top:1px solid #eee; font-size:11px; color:#999; line-height:1.5;">
+        <span data-i18n="setup_offline_hint">التطبيق يحفظ البيانات مؤقتاً حتى بدون إنترنت. عند عودة الاتصال تتم المزامنة تلقائياً.</span>
+      </div>
+    </div>
+  </div>
+
   <!-- ===== MAIN APP ===== -->
   <div id="app" class="app hidden">
     <header class="top-bar">
@@ -112,28 +126,33 @@
   <script src="vendor/chart.umd.min.js?v=74"></script>
   <script src="/socket.io/socket.io.js"></script>
   <script src="js/safety.js?v=74"></script>
-  <script src="i18n/ar.js?v=92"></script>
-  <script src="i18n/en.js?v=92"></script>
-  <script src="i18n.js?v=92"></script>
-  <script src="js/core/app-state.js?v=87"></script>
+  <script src="i18n/ar.js?v=119"></script>
+  <script src="i18n/en.js?v=119"></script>
+  <script src="i18n.js?v=116"></script>
+  <script src="js/core/app-state.js?v=137"></script>
+  <script src="js/core/capacitor-detect.js?v=1"></script>
+  <script src="js/core/webview-shield.js?v=1"></script>
   <script src="js/core/offline-order-queue.js?v=87"></script>
   <script src="js/core/offline-data-cache.js?v=87"></script>
   <script src="js/core/api-client.js?v=87"></script>
-  <script src="js/core/view-loader.js?v=89"></script>
+  <script src="js/core/view-loader.js?v=90"></script>
+  <script src="js/core/login-handler.js?v=143"></script>
+  <script src="js/core/session-manager.js?v=89"></script>
+  <script src="js/core/setup-wizard.js?v=88"></script>
   <script src="js/core/app-bootstrap.js?v=87"></script>
-  <script src="js/core/authentication.js?v=87"></script>
-  <script src="js/core/navigation.js?v=87"></script>
+  <script src="js/core/navigation.js?v=88"></script>
   <script src="js/core/ui-feedback.js?v=87"></script>
   <script src="js/core/realtime-sync.js?v=87"></script>
   <script src="js/features/orders/order-production-printing.js?v=81"></script>
-  <script src="js/features/orders/order-receipt-printing.js?v=81"></script>
+  <script src="js/features/orders/order-receipt-printing.js?v=116"></script>
   <script src="js/features/orders/order-active-list.js?v=81"></script>
-  <script src="js/features/orders/order-payment.js?v=82"></script>
+  <script src="js/features/orders/order-review.js?v=84"></script>
+  <script src="js/features/orders/order-payment.js?v=116"></script>
   <script src="js/features/orders/order-customer-picker.js?v=82"></script>
-  <script src="js/features/orders/order-method-selection.js?v=82"></script>
-  <script src="js/features/orders/order-screen.js?v=83"></script>
+  <script src="js/features/orders/order-method-selection.js?v=116"></script>
+  <script src="js/features/orders/order-screen.js?v=137"></script>
   <script src="js/features/orders/order-modifiers.js?v=83"></script>
-  <script src="js/features/orders/order-cart.js?v=83"></script>
+  <script src="js/features/orders/order-cart.js?v=137"></script>
   <script src="js/features/orders/order-save.js?v=83"></script>
   <script src="js/features/catalog/catalog-categories.js?v=86"></script>
   <script src="js/features/catalog/catalog-browser.js?v=86"></script>
@@ -143,26 +162,38 @@
   <script src="js/features/catalog/catalog-category-editor.js?v=86"></script>
   <script src="js/features/catalog/catalog-item-editor.js?v=86"></script>
   <script src="js/tables.js?v=74"></script>
-  <script src="js/admin.js?v=74"></script>
+  <script src="js/admin.js?v=75"></script>
+  <script src="js/features/cashiers/cashiers-admin.js?v=1"></script>
+  <script src="js/features/suppliers/suppliers-admin.js?v=138"></script>
+  <script src="js/features/suppliers/supplier-purchases.js?v=4"></script>
+  <script src="js/features/suppliers/supplier-payments.js?v=2"></script>
+  <script src="js/features/expenses/expenses-printing.js?v=1"></script>
+  <script src="js/features/expenses/expenses-admin.js?v=1"></script>
   <script src="js/inventory.js?v=74"></script>
   <script src="js/dashboard.js?v=75"></script>
-  <script src="js/employees.js?v=74"></script>
-  <script src="js/features/settings/settings-general.js?v=85"></script>
+  <script src="js/employee-list.js?v=87"></script>
+  <script src="js/employee-form.js?v=88"></script>
+  <script src="js/features/settings/settings-general.js?v=138"></script>
   <script src="js/features/settings/settings-printers.js?v=85"></script>
   <script src="js/features/settings/settings-network.js?v=85"></script>
   <script src="js/features/settings/settings-methods.js?v=85"></script>
   <script src="js/features/settings/settings-backup.js?v=85"></script>
   <script src="js/features/attendance/attendance-admin.js?v=97"></script>
-  <script src="js/invoices.js?v=74"></script>
-  <script src="js/features/shifts/shift-closing-thermal-printing.js?v=84"></script>
-  <script src="js/features/shifts/shift-closing-report-printing.js?v=84"></script>
-  <script src="js/features/shifts/shift-closing-dashboard.js?v=84"></script>
+  <script src="js/invoices.js?v=116"></script>
+  <script src="js/features/shifts/shift-platform.js?v=116"></script>
+  <script src="js/features/shifts/shift-closing-thermal-printing.js?v=118"></script>
+  <script src="js/features/shifts/shift-closing-report-printing.js?v=118"></script>
+  <script src="js/features/shifts/shift-closing-dashboard.js?v=119"></script>
   <script src="js/features/shifts/shift-opening.js?v=84"></script>
-  <script src="js/features/shifts/shift-employee-closing.js?v=84"></script>
-  <script src="js/features/reports/sales-report-view.js?v=91"></script>
-  <script src="js/features/reports/sales-report-printing.js?v=91"></script>
-  <script src="js/audit.js?v=75"></script>
-  <script src="js/reports.js?v=80"></script>
+  <script src="js/features/shifts/shift-employee-closing.js?v=118"></script>
+  <script src="js/features/reports/sales-report-view.js?v=116"></script>
+  <script src="js/features/reports/sales-report-template.js?v=116"></script>
+  <script src="js/features/reports/sales-report-printing.js?v=93"></script>
+  <script src="js/audit-meta.js?v=86"></script>
+  <script src="js/audit-render.js?v=139"></script>
+  <script src="js/reports.js?v=81"></script>
+  <script src="js/core/offline-storage.js?v=1"></script>
+  <script src="js/core/offline-sync.js?v=1"></script>
   <script>
     // Register Service Worker for PWA
     if ('serviceWorker' in navigator) {
@@ -192,8 +223,9 @@
     window.addEventListener('online', () => {
       document.getElementById('offline-bar').classList.add('hidden');
       showSyncStatus('syncing');
-      // Trigger background sync
-      if ('serviceWorker' in navigator && 'SyncManager' in window) {
+      if (typeof OfflineSync !== 'undefined') {
+        OfflineSync.forceSync().then(() => showSyncStatus('synced'));
+      } else if ('serviceWorker' in navigator && 'SyncManager' in window) {
         navigator.serviceWorker.ready.then(reg => reg.sync.register('sync-orders'));
       }
     });

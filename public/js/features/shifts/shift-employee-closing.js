@@ -12,18 +12,20 @@ async function openEmployeeClosingModal() {
   try {
     // Fetch current shift info (opening float)
     let openingCash = 0;
+    let cashExpenses = 0;
     try {
       const shiftInfo = await api(`/api/daily-closings/current-shift?date=${today}`);
       if (shiftInfo && shiftInfo.opening_cash) {
         openingCash = parseFloat(shiftInfo.opening_cash) || 0;
       }
+      cashExpenses = Number(shiftInfo?.cash_supplier_expenses || 0) + Number(shiftInfo?.cash_shop_expenses || 0);
     } catch(e) {}
 
     // Fetch live orders for current employee only
     const orders = await api(`/api/orders?date=${today}&employee_id=${currentUser.id}&not_deleted=0`);
     const completedOrders = (orders || []).filter(o => o.status === 'completed');
 
-    let totalRevenue = 0, cashTotal = 0, promptpayTotal = 0, cardTotal = 0, truemoneyTotal = 0;
+    let totalRevenue = 0, cashTotal = 0, promptpayTotal = 0, cardTotal = 0, truemoneyTotal = 0, platformTotal = 0;
     completedOrders.forEach(o => {
       const tot = parseFloat(o.total) || 0;
       totalRevenue += tot;
@@ -31,9 +33,11 @@ async function openEmployeeClosingModal() {
       else if (o.payment_method === 'promptpay') promptpayTotal += tot;
       else if (o.payment_method === 'card') cardTotal += tot;
       else if (o.payment_method === 'truemoney') truemoneyTotal += tot;
+      else if (o.payment_method === 'platform') platformTotal += tot;
     });
+    const platformApps = platformBreakdownFromOrders(completedOrders);
 
-    const totalDrawerExpected = cashTotal + openingCash;
+    const totalDrawerExpected = openingCash + cashTotal - cashExpenses;
 
     const modalTitle = currentLang === 'ar' ? `🔒 جرد الصندوق وإغلاق وردية (${escapeHtml(currentUser.name)})` : `🔒 Shift Audit & Close (${escapeHtml(currentUser.name)})`;
 
@@ -48,6 +52,8 @@ async function openEmployeeClosingModal() {
       promptpay_total: promptpayTotal,
       card_total: cardTotal,
       truemoney_total: truemoneyTotal,
+      platform_total: platformTotal,
+      platform_breakdown: platformApps,
       closed_at: new Date().toISOString()
     };
     const shiftDataJson = JSON.stringify(shiftData).replace(/"/g, '&quot;');
@@ -91,9 +97,10 @@ async function openEmployeeClosingModal() {
             <strong style="color:#28a745;font-size:15px;">${cashTotal.toFixed(2)} ${escapeHtml(currency)}</strong>
           </div>
           <div class="emp-breakdown-row" style="border-top:1.5px solid var(--border);margin-top:4px;padding-top:8px;">
-            <span style="font-weight:700;color:#721c24;">💰 ${currentLang === 'ar' ? 'إجمالي النقد المفترض بالدرج (عُهدة + كاش):' : 'Total Expected in Drawer:'}</span>
+            <span style="font-weight:700;color:#721c24;">💰 ${t('expected_cash_drawer')}:</span>
             <strong style="color:#721c24;font-size:17px;font-weight:800;">${totalDrawerExpected.toFixed(2)} ${escapeHtml(currency)}</strong>
           </div>
+          <div class="emp-breakdown-row"><span>${t('expenses_total')} (${t('cash')})</span><strong>${cashExpenses.toFixed(2)} ${escapeHtml(currency)}</strong></div>
           <div class="emp-breakdown-row">
             <span>📱 ${currentLang === 'ar' ? 'مدفوعات البنك / QR PromptPay:' : 'PromptPay QR:'}</span>
             <strong style="font-size:14px;">${promptpayTotal.toFixed(2)} ${escapeHtml(currency)}</strong>
@@ -102,6 +109,8 @@ async function openEmployeeClosingModal() {
             <span>💳 ${currentLang === 'ar' ? 'بطاقات وشبكة و TrueMoney:' : 'Cards & Wallets:'}</span>
             <strong style="font-size:14px;">${(cardTotal + truemoneyTotal).toFixed(2)} ${escapeHtml(currency)}</strong>
           </div>
+          <div class="emp-breakdown-row"><span>${t('platform_receivable')}</span><strong>${platformTotal.toFixed(2)} ${escapeHtml(currency)}</strong></div>
+          ${Object.entries(platformApps).map(([app, value]) => `<div class="emp-breakdown-row"><span>${escapeHtml(app)}</span><strong>${value.toFixed(2)} ${escapeHtml(currency)}</strong></div>`).join('')}
         </div>
 
         <!-- STEP 1: Pre-print thermal slip for verification & drawer cross-check -->
@@ -131,6 +140,8 @@ async function openEmployeeClosingModal() {
             ${currentLang === 'ar' ? 'ملاحظات المطابقة أو العجز / الزيادة بعد الجرد (اختياري):' : 'Reconciliation Notes (Optional):'}
           </label>
           <input type="text" id="emp-closing-notes" placeholder="${currentLang === 'ar' ? 'مثال: تم الجرد والمطابقة بنجاح، النقد بالدرج مطابق تماماً...' : 'e.g. All counted and matched accurately...'}" style="width:100%;margin-top:4px;padding:8px 10px;border-radius:6px;border:1px solid #ccc;font-size:12px;">
+          <label for="emp-counted-cash" style="display:block;margin-top:10px;font-size:12px;font-weight:600;">${t('counted_cash')}</label>
+          <input type="number" id="emp-counted-cash" min="0" step="0.01" placeholder="${t('counted_cash_placeholder')}" style="width:100%;margin-top:4px;padding:8px 10px;border-radius:6px;border:1px solid #ccc;">
 
           <div style="margin-top:12px;">
             <button type="button" class="btn btn-save" style="width:100%;padding:12px;font-size:14px;font-weight:800;border-radius:8px;display:flex;justify-content:center;align-items:center;gap:8px;" onclick="submitEmployeeShiftClosing(${totalRevenue}, ${completedOrders.length}, ${cashTotal}, ${promptpayTotal}, ${cardTotal}, ${truemoneyTotal}, ${openingCash})">
@@ -154,13 +165,15 @@ async function openEmployeeClosingModal() {
 
 async function submitEmployeeShiftClosing(totalRevenue, totalOrders, cashTotal, promptpayTotal, cardTotal, truemoneyTotal, openingCash = 0) {
   const notes = document.getElementById('emp-closing-notes')?.value || '';
+  const countedCash = document.getElementById('emp-counted-cash')?.value || '';
   const date = businessDate();
 
   try {
     const res = await api('/api/daily-closings/close', 'POST', {
       employee_id: currentUser.id,
       date: date,
-      notes: notes
+      notes: notes,
+      counted_cash: countedCash
     });
 
     if (res.error) {

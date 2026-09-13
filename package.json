@@ -14,6 +14,7 @@
     "android:sync": "node scripts/capacitor-env.js ./node_modules/@capacitor/cli/bin/capacitor sync android"
   },
   "dependencies": {
+    "@capacitor-community/sqlite": "8.1.0",
     "@capacitor/android": "^8.5.1",
     "@capacitor/core": "^8.5.1",
     "chart.js": "^4.5.1",
@@ -22,6 +23,7 @@
     "escpos-network": "3.0.0-alpha.5",
     "exceljs": "^4.4.0",
     "express": "^4.18.2",
+    "jeep-sqlite": "2.8.0",
     "socket.io": "^4.7.4"
   },
   "optionalDependencies": {
@@ -50,14 +52,15 @@
     ],
     "win": {
       "target": "nsis",
-      "icon": "public/nokta-pos-icon.png"
+      "icon": "build-icons/icons/win/icon.ico"
     },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true
-    }
+    },
+    "npmRebuild": false
   },
   "engines": {
     "node": ">=22.5.0"

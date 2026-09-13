@@ -14,7 +14,7 @@ const { createSalesReportXlsx } = require('../src/services/sales-report-excel.se
   assert.equal(Buffer.from(buffer).subarray(0, 2).toString(), 'PK');
   const workbook = new ExcelJS.Workbook();
   await workbook.xlsx.load(buffer);
-  assert.deepEqual(workbook.worksheets.map(sheet => sheet.name), ['الملخص', 'المبيعات اليومية', 'طرق الدفع', 'الموظفون']);
+  assert.deepEqual(workbook.worksheets.map(sheet => sheet.name), ['الملخص', 'أنواع الطلبات', 'المبيعات اليومية', 'طرق الدفع', 'الموظفون']);
   assert.equal(workbook.getWorksheet('الملخص').getCell('F4').value, 125.5);
   assert.equal(workbook.getWorksheet('الموظفون').getCell('A4').value, 'موظف اختبار');
   console.log('PASS 25: real XLSX sales report with summary, daily, payment and employee sheets');

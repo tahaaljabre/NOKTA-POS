@@ -1,9 +1,23 @@
 {
   "appId": "com.nokta.pos",
   "appName": "NOKTA POS",
-  "webDir": "mobile-shell",
+  "webDir": "public",
   "server": {
-    "androidScheme": "https",
+    "androidScheme": "http",
     "cleartext": true
+  },
+  "plugins": {
+    "CapacitorHttp": {
+      "enabled": true
+    },
+    "Sqlite": {
+      "iosDatabaseLocation": "Library/Database",
+      "androidDatabaseLocation": "databases"
+    }
+  },
+  "android": {
+    "allowMixedContent": true,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": true
   }
 }

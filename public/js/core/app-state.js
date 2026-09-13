@@ -23,6 +23,7 @@ let appCurrency = localStorage.getItem('pos_currency') || '฿';
 let appRestaurantName = localStorage.getItem('pos_restaurant_name') || 'اسم المنشأة';
 let appRestaurantNameEn = localStorage.getItem('pos_restaurant_name_en') || 'Your Business';
 let appTaxRate = parseFloat(localStorage.getItem('pos_tax_rate')) || 0;
+let appTaxType = localStorage.getItem('pos_tax_type') || 'exclusive';
 
 function getCurrency() {
   return appCurrency || '฿';

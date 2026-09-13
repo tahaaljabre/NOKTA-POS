@@ -19,6 +19,7 @@ router.get('/', (req, res) => {
   }
   let sql = 'SELECT o.*, t.number as table_number, t.name as table_name, c.name as customer_name, c.phone as customer_phone FROM orders o LEFT JOIN "tables" t ON o.table_id=t.id LEFT JOIN customers c ON o.customer_id=c.id WHERE 1=1';
   const p = [];
+  if (req.currentUser.role !== 'admin' && req.currentUser.cashier_code) { sql += ' AND o.cashier_code=?'; p.push(req.currentUser.cashier_code); }
   if (status) { sql += ' AND o.status=?'; p.push(status); }
   if (date) { const r=require("../services/business-time").range(date);sql += " AND julianday(COALESCE(o.completed_at,o.created_at))>=julianday(?) AND julianday(COALESCE(o.completed_at,o.created_at))<julianday(?)";p.push(r.start,r.end); }
   if (employee_id) { sql += ' AND o.employee_id=?'; p.push(employee_id); }
@@ -49,6 +50,7 @@ router.get('/', (req, res) => {
     });
   }
 
+  orders.forEach(o => { o.invoice_code = o.cashier_code ? `${o.cashier_code}-${o.invoice_number || o.id}` : String(o.invoice_number || o.id); });
   res.json(orders);
 });
 
@@ -71,8 +73,10 @@ router.post('/:id/ready',requirePermission('kitchen'),(req,res)=>{
 router.get('/:id', (req, res) => {
   const order = db.prepare('SELECT o.*, t.number as table_number, t.name as table_name, c.name as customer_name, c.phone as customer_phone FROM orders o LEFT JOIN "tables" t ON o.table_id=t.id LEFT JOIN customers c ON o.customer_id=c.id WHERE o.id=?').get(req.params.id);
   if (!order) return res.status(404).json({ error: 'Order not found' });
+  if (req.currentUser.role !== 'admin' && req.currentUser.cashier_code && order.cashier_code !== req.currentUser.cashier_code) throw error('الفاتورة تخص كاشيراً آخر / Invoice belongs to another cashier',403);
   if(!can(req.currentUser,'view_invoices') && !(can(req.currentUser,'pos') && order.status==='active' && !order.is_deleted)) throw error('صلاحية الفاتورة مطلوبة / Invoice access required',403);
   const items = db.prepare('SELECT oi.*, i.name as item_name, i.name_en as item_name_en, i.image as item_image FROM order_items oi LEFT JOIN items i ON oi.item_id=i.id WHERE oi.order_id=?').all(req.params.id);
+  order.invoice_code = order.cashier_code ? `${order.cashier_code}-${order.invoice_number || order.id}` : String(order.invoice_number || order.id);
   res.json({ ...order, items });
 });
 

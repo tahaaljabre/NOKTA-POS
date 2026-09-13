@@ -38,11 +38,24 @@ function setupMenuSearch() {
   // Station selector handler
   const stationSel = document.getElementById('pos-station-select');
   if (stationSel) {
-    const savedStation = localStorage.getItem('pos_current_station') || 'cashier_floor1';
-    stationSel.value = savedStation;
+    if (currentUser?.cashier_code) {
+      stationSel.closest('.station-badge-wrap')?.style.setProperty('display', 'none');
+      return;
+    }
+    const savedStation = localStorage.getItem('pos_current_station') || currentUser?.default_station || 'cashier_floor1';
+    // Build the selector from configured cashiers so switching follows the
+    // cashier code, not a hard-coded floor name.
+    api('/api/cashiers').then(cashiers => {
+      const active = (cashiers || []).filter(c => c.active && (!currentUser?.cashier_code || c.code === currentUser.cashier_code));
+      if (active.length) stationSel.innerHTML = active.map(c => `<option value="cashier:${escapeHtml(c.code)}">📍 ${escapeHtml(currentLang === 'ar' ? c.name : (c.name_en || c.name))} (${escapeHtml(c.code)})</option>`).join('') + '<option value="waiter_mobile">🤵 نادل جوال / Mobile Waiter</option>';
+      stationSel.value = currentUser?.cashier_code ? `cashier:${currentUser.cashier_code}` : (savedStation.startsWith('cashier:') ? savedStation : savedStation);
+      if (currentUser?.cashier_code) stationSel.disabled = true;
+    }).catch(() => { stationSel.value = savedStation; });
     stationSel.onchange = (e) => {
+      if (currentUser?.cashier_code) { e.target.value = `cashier:${currentUser.cashier_code}`; return; }
       localStorage.setItem('pos_current_station', e.target.value);
-      toast(currentLang === 'ar' ? `تم تحويل المحطة إلى: ${e.target.options[e.target.selectedIndex].text}` : `Station switched to: ${e.target.value}`, 'info');
+      if (currentUser) currentUser.active_cashier_code = e.target.value.startsWith('cashier:') ? e.target.value.slice(8) : '';
+      toast(currentLang === 'ar' ? `تم تحويل الكاشير إلى: ${e.target.options[e.target.selectedIndex].text}` : `Cashier switched to: ${e.target.options[e.target.selectedIndex].text}`, 'info');
     };
   }
 }
