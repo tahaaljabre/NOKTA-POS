@@ -175,11 +175,12 @@ async function importMenuExcel(input) {
     resultDiv.style.border = `1px solid ${result.errors?.length ? '#ffc107' : '#28a745'}`;
     toast(currentLang === 'ar' ? '✅ تم استيراد المنيو' : '✅ Menu imported', 'success');
   } catch (e) {
-    resultDiv.innerHTML = `<strong style="color:#e74c3c;">❌ ${escapeHtml(e.message)}</strong>`;
+    console.error('[Menu Import Error]', e);
+    resultDiv.innerHTML = `<strong style="color:#e74c3c;">❌ ${escapeHtml(e.message || String(e))}</strong>`;
     resultDiv.style.display = 'block';
     resultDiv.style.background = '#f8d7da';
     resultDiv.style.border = '1px solid #f5c6cb';
-    toast(currentLang === 'ar' ? 'خطأ في الاستيراد' : 'Import failed', 'error');
+    toast(currentLang === 'ar' ? `خطأ في الاستيراد: ${e.message}` : `Import failed: ${e.message}`, 'error');
   }
   input.value = '';
 }

@@ -132,8 +132,8 @@ function detectColumns(headerRow) {
 
     if (/^#|رقم$|序号/i.test(val)) cols.id = c;
     else if (/اسم.*عربي|اسم.*الصنف|arabic.*name|item.*name.*ar|اسم بالعربي/i.test(val)) cols.name = c;
-    else if (/english.*name|item.*name.*en|name.*english|الاسم.*انجليزي|اسم.*انجليزي|item name/i.test(val)) cols.name_en = c;
-    else if (/سعر|price|cost|ثمن|السعر/i.test(val) && !cols.price) cols.price = c;
+    else if (/^name\s*\(en\)|english.*name|item.*name.*en|name.*english|الاسم.*انجليزي|اسم.*انجليزي|item name/i.test(val)) cols.name_en = c;
+    else if (/^السعر$|^price$|^ثمن$/i.test(val) && !cols.price) cols.price = c;
     else if (/سعر2|price2|second.*price/i.test(val)) cols.price2 = c;
     else if (/تكلفة|cost.*price|سعر.*الشراء/i.test(val)) cols.cost_price = c;
     else if (/صورة|image|photo|picture|logo|url|رابط/i.test(val)) cols.image = c;
@@ -163,6 +163,9 @@ function isCategoryRow(row, cols) {
 
   // Not a number
   if (/^\d+$/.test(a)) return false;
+
+  // Native NOKTA export marks category rows with a folder in column A.
+  if (a === '📁') return true;
 
   // Category: A===B (text repeated across columns), price is NOT a number
   if (a === b) {
@@ -234,7 +237,7 @@ async function parseMenuImportWorkbook(buffer) {
     const nameEnCol = cols ? cols.name_en : 3;
     const priceCol = cols ? cols.price : 4;
 
-    const name = String(row.getCell(nameCol).value || '').trim();
+    let name = String(row.getCell(nameCol).value || '').trim();
     const nameEn = nameEnCol ? String(row.getCell(nameEnCol).value || '').trim() : '';
     const price = priceCol ? Number(row.getCell(priceCol).value) || 0 : 0;
 
@@ -256,6 +259,9 @@ async function parseMenuImportWorkbook(buffer) {
       return;
     }
 
+    // Strip the visual tree marker used by NOKTA's own export.
+    name = name.replace(/^\s*[├└]─\s*/, '').trim();
+
     // It's an item
     itemSortByCat++;
     const imageCol = cols && cols.image ? String(row.getCell(cols.image).value || '').trim() : '';
@@ -271,7 +277,7 @@ async function parseMenuImportWorkbook(buffer) {
       barcode: cols && cols.barcode ? String(row.getCell(cols.barcode).value || '').trim() : '',
       sku: '',
       sort_order: cols && cols.sort_order ? Number(row.getCell(cols.sort_order).value) || itemSortByCat : itemSortByCat,
-      active: cols && cols.active ? (String(row.getCell(cols.active).value || '1').trim() === '0' ? 0 : 1) : 1
+      active: cols && cols.active ? (/^(0|✗|x|false|لا|غير نشط)$/i.test(String(row.getCell(cols.active).value || '').trim()) ? 0 : 1) : 1
     });
   });
 

@@ -1,5 +1,5 @@
 {
-  "date": "2026-09-13T17:54:35.313Z",
+  "date": "2026-09-14T07:01:03.056Z",
   "results": [
     {
       "file": "01-sql.cjs",
@@ -94,7 +94,7 @@
     {
       "file": "19-tls.cjs",
       "passed": true,
-      "output": "\n========================================\n  🍽️ POS Server: https://127.0.0.1:53967\n  🔐 Initial setup: create the administrator account in the browser\n  📱 Responsive Multi-device Architecture\n========================================\n\nPASS 19: actual HTTPS server, verified test CA and API response\nSchema init error: no such column: cashier_code\nSchema init error: no such column: cashier_code\n"
+      "output": "\n========================================\n  🍽️ POS Server: https://127.0.0.1:50553\n  🔐 Initial setup: create the administrator account in the browser\n  📱 Responsive Multi-device Architecture\n========================================\n\nPASS 19: actual HTTPS server, verified test CA and API response\nSchema init error: no such column: cashier_code\nSchema init error: no such column: cashier_code\n"
     },
     {
       "file": "20-translations.cjs",
@@ -225,6 +225,11 @@
       "file": "45-login-realtime.cjs",
       "passed": true,
       "output": "PASS 45: login page loads Socket.IO and has a safe realtime fallback\n"
+    },
+    {
+      "file": "46-menu-excel-import.cjs",
+      "passed": true,
+      "output": "PASS 46: menu import detects optional image and flexible column order\n"
     }
   ]
 }
