@@ -184,3 +184,68 @@ async function importMenuExcel(input) {
   }
   input.value = '';
 }
+
+// ===== Database Restore (SQLite) =====
+let _restoreDatabaseFile = null;
+
+function previewDatabaseFile(input) {
+  const file = input.files[0];
+  if (!file) return;
+  
+  _restoreDatabaseFile = file;
+  const preview = document.getElementById('restore-database-preview');
+  const btn = document.getElementById('btn-restore-database');
+  
+  const sizeKB = (file.size / 1024).toFixed(2);
+  const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+  const sizeLabel = file.size > 1024 * 1024 ? `${sizeMB} MB` : `${sizeKB} KB`;
+  
+  const nameLabel = currentLang === 'ar' ? 'اسم الملف' : 'File Name';
+  const sizeLabel2 = currentLang === 'ar' ? 'الحجم' : 'Size';
+  const typeLabel = currentLang === 'ar' ? 'النوع' : 'Type';
+  
+  preview.innerHTML = `<strong>💾 ${escapeHtml(file.name)}</strong><br><span style="color:#888;">${sizeLabel2}: ${sizeLabel}</span><br>${typeLabel}: SQLite Database`;
+  preview.style.display = 'block';
+  btn.disabled = false;
+}
+
+async function restoreDatabaseFile() {
+  if (!_restoreDatabaseFile) return;
+  
+  const confirmMsg = currentLang === 'ar'
+    ? '⚠️ تحذير خطير: سيتم استبدال قاعدة البيانات بالكامل وإعادة تشغيل التطبيق. هل أنت متأكد تماماً؟'
+    : '⚠️ Critical Warning: The entire database will be replaced and the app will restart. Are you absolutely sure?';
+  
+  if (!confirm(confirmMsg)) return;
+  
+  try {
+    toast(currentLang === 'ar' ? 'جاري استعادة قاعدة البيانات...' : 'Restoring database...', 'info');
+    
+    const formData = new FormData();
+    formData.append('file', _restoreDatabaseFile);
+    
+    const response = await fetch(`${API_BASE}/api/backup/restore-database`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${currentUser?.token || ''}`
+      },
+      body: formData
+    });
+    
+    const result = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(result.error || 'Restore failed');
+    }
+    
+    toast(currentLang === 'ar' ? '✅ تمت استعادة القاعدة بنجاح. سيتم إعادة التشغيل...' : '✅ Database restored successfully. Restarting...', 'success');
+    
+    setTimeout(() => {
+      location.reload();
+    }, 2000);
+    
+  } catch (error) {
+    console.error('[Database Restore Error]', error);
+    toast(currentLang === 'ar' ? `خطأ في الاستعادة: ${error.message}` : `Restore failed: ${error.message}`, 'error');
+  }
+}
